@@ -1,0 +1,534 @@
+SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
+    'public',
+    'emp30k',
+    $$id integer,
+      salary numeric
+    $$,
+'id');
+ ll_create_bitemporal_table 
+----------------------------
+ t
+(1 row)
+
+INSERT INTO public.emp30k(id, salary, effective, asserted)
+  SELECT id, salary, effective, tstzrange(now(), 'infinity', '[)') AS asserted FROM
+  (SELECT generate_series(1, 300, 1) AS id, generate_series(501, 800, 1) AS salary) AS attrs
+  CROSS JOIN (
+    SELECT tstzrange(t.d, (t.d + '1 day'::interval), '[)') AS effective FROM
+      generate_series('1950-01-01'::timestamptz, '1950-04-10'::timestamptz, '1 day') AS t(d)
+      ) eff;
+SELECT COUNT(*) FROM public.emp30k;
+ count 
+-------
+ 30000
+(1 row)
+
+EXPLAIN ANALYZE SELECT AVG(salary), SUM(salary), MAX(salary), MIN(salary), COUNT(salary)
+  FROM public.emp30k;
+                                                   QUERY PLAN                                                    
+-----------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=801.37..801.38 rows=1 width=136) (actual time=7.783..7.784 rows=1 loops=1)
+   ->  Seq Scan on emp30k  (cost=0.00..586.18 rows=21518 width=32) (actual time=0.003..2.203 rows=30000 loops=1)
+ Planning Time: 0.093 ms
+ Execution Time: 7.801 ms
+(4 rows)
+
+EXPLAIN ANALYZE SELECT * FROM
+  ita_now(
+    'public',
+    'emp30k',
+    '{}',
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    ARRAY['salary', 'salary', 'salary', 'salary', 'salary'],
+    ARRAY['avg', 'sum', 'max', 'min', 'count']
+  ) AS (
+    avg numeric,
+    sum numeric,
+    max numeric,
+    min numeric,
+    count numeric,
+    effective tstzrange
+  );
+                                                      QUERY PLAN                                                      
+----------------------------------------------------------------------------------------------------------------------
+ Function Scan on ita_now  (cost=0.25..10.25 rows=1000 width=192) (actual time=12145.468..12145.474 rows=100 loops=1)
+ Planning Time: 0.030 ms
+ Execution Time: 12150.361 ms
+(3 rows)
+
+EXPLAIN ANALYZE SELECT * FROM
+  mwta_now(
+    'public',
+    'emp30k',
+    '{}',
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    ARRAY['salary', 'salary', 'salary', 'salary', 'salary'],
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    '5 hours'::interval
+  ) AS (
+    avg numeric,
+    sum numeric,
+    max numeric,
+    min numeric,
+    count numeric,
+    effective tstzrange
+  );
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Function Scan on mwta_now  (cost=0.25..10.25 rows=1000 width=192) (actual time=23207.536..23207.548 rows=199 loops=1)
+ Planning Time: 0.031 ms
+ Execution Time: 23207.568 ms
+(3 rows)
+
+EXPLAIN ANALYZE SELECT * FROM
+  sta_now(
+    'public',
+    'emp30k',
+    '{}',
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    ARRAY['salary', 'salary', 'salary', 'salary', 'salary'],
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    '1 week'::interval
+  ) AS (
+    avg numeric,
+    sum numeric,
+    max numeric,
+    min numeric,
+    count numeric,
+    effective tstzrange
+  );
+                                                    QUERY PLAN                                                     
+-------------------------------------------------------------------------------------------------------------------
+ Function Scan on sta_now  (cost=0.25..10.25 rows=1000 width=192) (actual time=1923.755..1923.757 rows=15 loops=1)
+ Planning Time: 0.038 ms
+ Execution Time: 1923.773 ms
+(3 rows)
+
+-- 60k
+SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
+    'public',
+    'emp60k',
+    $$id integer,
+      salary numeric
+    $$,
+'id');
+ ll_create_bitemporal_table 
+----------------------------
+ t
+(1 row)
+
+INSERT INTO public.emp60k(id, salary, effective, asserted)
+  SELECT id, salary, effective, tstzrange(now(), 'infinity', '[)') AS asserted FROM
+  (SELECT generate_series(1, 300, 1) AS id, generate_series(501, 800, 1) AS salary) AS attrs
+  CROSS JOIN (
+    SELECT tstzrange(t.d, (t.d + '1 day'::interval), '[)') AS effective FROM
+      generate_series('1950-01-01'::timestamptz, '1950-07-19'::timestamptz, '1 day') AS t(d)
+      ) eff;
+SELECT COUNT(*) FROM public.emp60k;
+ count 
+-------
+ 60000
+(1 row)
+
+EXPLAIN ANALYZE SELECT AVG(salary), SUM(salary), MAX(salary), MIN(salary), COUNT(salary)
+  FROM public.emp60k;
+                                                    QUERY PLAN                                                    
+------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=1600.57..1600.58 rows=1 width=136) (actual time=14.687..14.688 rows=1 loops=1)
+   ->  Seq Scan on emp60k  (cost=0.00..1170.78 rows=42978 width=32) (actual time=0.005..4.103 rows=60000 loops=1)
+ Planning Time: 0.045 ms
+ Execution Time: 14.704 ms
+(4 rows)
+
+EXPLAIN ANALYZE SELECT * FROM
+  ita_now(
+    'public',
+    'emp60k',
+    '{}',
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    ARRAY['salary', 'salary', 'salary', 'salary', 'salary'],
+    ARRAY['avg', 'sum', 'max', 'min', 'count']
+  ) AS (
+    avg numeric,
+    sum numeric,
+    max numeric,
+    min numeric,
+    count numeric,
+    effective tstzrange
+  );
+                                                      QUERY PLAN                                                      
+----------------------------------------------------------------------------------------------------------------------
+ Function Scan on ita_now  (cost=0.25..10.25 rows=1000 width=192) (actual time=19550.716..19550.728 rows=200 loops=1)
+ Planning Time: 0.017 ms
+ Execution Time: 19550.745 ms
+(3 rows)
+
+EXPLAIN ANALYZE SELECT * FROM
+  mwta_now(
+    'public',
+    'emp60k',
+    '{}',
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    ARRAY['salary', 'salary', 'salary', 'salary', 'salary'],
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    '5 hours'::interval
+  ) AS (
+    avg numeric,
+    sum numeric,
+    max numeric,
+    min numeric,
+    count numeric,
+    effective tstzrange
+  );
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Function Scan on mwta_now  (cost=0.25..10.25 rows=1000 width=192) (actual time=46564.383..46564.407 rows=399 loops=1)
+ Planning Time: 0.030 ms
+ Execution Time: 46564.433 ms
+(3 rows)
+
+EXPLAIN ANALYZE SELECT * FROM
+  sta_now(
+    'public',
+    'emp60k',
+    '{}',
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    ARRAY['salary', 'salary', 'salary', 'salary', 'salary'],
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    '1 week'::interval
+  ) AS (
+    avg numeric,
+    sum numeric,
+    max numeric,
+    min numeric,
+    count numeric,
+    effective tstzrange
+  );
+                                                    QUERY PLAN                                                     
+-------------------------------------------------------------------------------------------------------------------
+ Function Scan on sta_now  (cost=0.25..10.25 rows=1000 width=192) (actual time=2071.585..2071.588 rows=29 loops=1)
+ Planning Time: 0.048 ms
+ Execution Time: 2071.603 ms
+(3 rows)
+
+-- 90k
+SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
+    'public',
+    'emp90k',
+    $$id integer,
+      salary numeric
+    $$,
+'id');
+ ll_create_bitemporal_table 
+----------------------------
+ t
+(1 row)
+
+INSERT INTO public.emp90k(id, salary, effective, asserted)
+  SELECT id, salary, effective, tstzrange(now(), 'infinity', '[)') AS asserted FROM
+  (SELECT generate_series(1, 450, 1) AS id, generate_series(501, 950, 1) AS salary) AS attrs
+  CROSS JOIN (
+    SELECT tstzrange(t.d, (t.d + '1 day'::interval), '[)') AS effective FROM
+      generate_series('1950-01-01'::timestamptz, '1950-07-19'::timestamptz, '1 day') AS t(d)
+      ) eff;
+SELECT COUNT(*) FROM public.emp90k;
+ count 
+-------
+ 90000
+(1 row)
+
+EXPLAIN ANALYZE SELECT AVG(salary), SUM(salary), MAX(salary), MIN(salary), COUNT(salary)
+  FROM public.emp90k;
+                                                    QUERY PLAN                                                    
+------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=2401.93..2401.94 rows=1 width=136) (actual time=20.208..20.209 rows=1 loops=1)
+   ->  Seq Scan on emp90k  (cost=0.00..1756.96 rows=64496 width=32) (actual time=0.004..5.900 rows=90000 loops=1)
+ Planning Time: 0.051 ms
+ Execution Time: 20.222 ms
+(4 rows)
+
+EXPLAIN ANALYZE SELECT * FROM
+  ita_now(
+    'public',
+    'emp90k',
+    '{}',
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    ARRAY['salary', 'salary', 'salary', 'salary', 'salary'],
+    ARRAY['avg', 'sum', 'max', 'min', 'count']
+  ) AS (
+    avg numeric,
+    sum numeric,
+    max numeric,
+    min numeric,
+    count numeric,
+    effective tstzrange
+  );
+                                                      QUERY PLAN                                                      
+----------------------------------------------------------------------------------------------------------------------
+ Function Scan on ita_now  (cost=0.25..10.25 rows=1000 width=192) (actual time=37876.308..37876.320 rows=200 loops=1)
+ Planning Time: 0.017 ms
+ Execution Time: 37876.338 ms
+(3 rows)
+
+EXPLAIN ANALYZE SELECT * FROM
+  mwta_now(
+    'public',
+    'emp90k',
+    '{}',
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    ARRAY['salary', 'salary', 'salary', 'salary', 'salary'],
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    '5 hours'::interval
+  ) AS (
+    avg numeric,
+    sum numeric,
+    max numeric,
+    min numeric,
+    count numeric,
+    effective tstzrange
+  );
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Function Scan on mwta_now  (cost=0.25..10.25 rows=1000 width=192) (actual time=97783.934..97783.957 rows=399 loops=1)
+ Planning Time: 0.035 ms
+ Execution Time: 97783.986 ms
+(3 rows)
+
+EXPLAIN ANALYZE SELECT * FROM
+  sta_now(
+    'public',
+    'emp90k',
+    '{}',
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    ARRAY['salary', 'salary', 'salary', 'salary', 'salary'],
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    '1 week'::interval
+  ) AS (
+    avg numeric,
+    sum numeric,
+    max numeric,
+    min numeric,
+    count numeric,
+    effective tstzrange
+  );
+                                                    QUERY PLAN                                                     
+-------------------------------------------------------------------------------------------------------------------
+ Function Scan on sta_now  (cost=0.25..10.25 rows=1000 width=192) (actual time=2783.753..2783.755 rows=29 loops=1)
+ Planning Time: 0.039 ms
+ Execution Time: 2783.770 ms
+(3 rows)
+
+-- 120k
+SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
+    'public',
+    'emp120k',
+    $$id integer,
+      salary numeric
+    $$,
+'id');
+ ll_create_bitemporal_table 
+----------------------------
+ t
+(1 row)
+
+INSERT INTO public.emp120k(id, salary, effective, asserted)
+  SELECT id, salary, effective, tstzrange(now(), 'infinity', '[)') AS asserted FROM
+  (SELECT generate_series(1, 600, 1) AS id, generate_series(501, 1100, 1) AS salary) AS attrs
+  CROSS JOIN (
+    SELECT tstzrange(t.d, (t.d + '1 day'::interval), '[)') AS effective FROM
+      generate_series('1950-01-01'::timestamptz, '1950-07-19'::timestamptz, '1 day') AS t(d)
+      ) eff;
+SELECT COUNT(*) FROM public.emp120k;
+ count  
+--------
+ 120000
+(1 row)
+
+EXPLAIN ANALYZE SELECT AVG(salary), SUM(salary), MAX(salary), MIN(salary), COUNT(salary)
+  FROM public.emp120k;
+                                                     QUERY PLAN                                                     
+--------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=3201.12..3201.14 rows=1 width=136) (actual time=28.243..28.244 rows=1 loops=1)
+   ->  Seq Scan on emp120k  (cost=0.00..2341.56 rows=85956 width=32) (actual time=0.004..8.087 rows=120000 loops=1)
+ Planning Time: 0.034 ms
+ Execution Time: 28.265 ms
+(4 rows)
+
+EXPLAIN ANALYZE SELECT * FROM
+  ita_now(
+    'public',
+    'emp120k',
+    '{}',
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    ARRAY['salary', 'salary', 'salary', 'salary', 'salary'],
+    ARRAY['avg', 'sum', 'max', 'min', 'count']
+  ) AS (
+    avg numeric,
+    sum numeric,
+    max numeric,
+    min numeric,
+    count numeric,
+    effective tstzrange
+  );
+                                                      QUERY PLAN                                                      
+----------------------------------------------------------------------------------------------------------------------
+ Function Scan on ita_now  (cost=0.25..10.25 rows=1000 width=192) (actual time=60874.269..60874.282 rows=200 loops=1)
+ Planning Time: 0.017 ms
+ Execution Time: 60874.302 ms
+(3 rows)
+
+EXPLAIN ANALYZE SELECT * FROM
+  mwta_now(
+    'public',
+    'emp120k',
+    '{}',
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    ARRAY['salary', 'salary', 'salary', 'salary', 'salary'],
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    '5 hours'::interval
+  ) AS (
+    avg numeric,
+    sum numeric,
+    max numeric,
+    min numeric,
+    count numeric,
+    effective tstzrange
+  );
+                                                       QUERY PLAN                                                        
+-------------------------------------------------------------------------------------------------------------------------
+ Function Scan on mwta_now  (cost=0.25..10.25 rows=1000 width=192) (actual time=162889.131..162889.156 rows=399 loops=1)
+ Planning Time: 0.031 ms
+ Execution Time: 162889.185 ms
+(3 rows)
+
+EXPLAIN ANALYZE SELECT * FROM
+  sta_now(
+    'public',
+    'emp120k',
+    '{}',
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    ARRAY['salary', 'salary', 'salary', 'salary', 'salary'],
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    '1 week'::interval
+  ) AS (
+    avg numeric,
+    sum numeric,
+    max numeric,
+    min numeric,
+    count numeric,
+    effective tstzrange
+  );
+                                                    QUERY PLAN                                                     
+-------------------------------------------------------------------------------------------------------------------
+ Function Scan on sta_now  (cost=0.25..10.25 rows=1000 width=192) (actual time=3526.974..3526.976 rows=29 loops=1)
+ Planning Time: 0.036 ms
+ Execution Time: 3526.990 ms
+(3 rows)
+
+-- 150k
+SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
+    'public',
+    'emp150k',
+    $$id integer,
+      salary numeric
+    $$,
+'id');
+ ll_create_bitemporal_table 
+----------------------------
+ t
+(1 row)
+
+INSERT INTO public.emp150k(id, salary, effective, asserted)
+  SELECT id, salary, effective, tstzrange(now(), 'infinity', '[)') AS asserted FROM
+  (SELECT generate_series(1, 600, 1) AS id, generate_series(501, 1100, 1) AS salary) AS attrs
+  CROSS JOIN (
+    SELECT tstzrange(t.d, (t.d + '1 day'::interval), '[)') AS effective FROM
+      generate_series('1950-01-01'::timestamptz, '1950-09-07'::timestamptz, '1 day') AS t(d)
+      ) eff;
+SELECT COUNT(*) FROM public.emp150k;
+ count  
+--------
+ 150000
+(1 row)
+
+EXPLAIN ANALYZE SELECT AVG(salary), SUM(salary), MAX(salary), MIN(salary), COUNT(salary)
+  FROM public.emp150k;
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=4000.32..4000.34 rows=1 width=136) (actual time=33.620..33.621 rows=1 loops=1)
+   ->  Seq Scan on emp150k  (cost=0.00..2926.16 rows=107416 width=32) (actual time=0.004..9.970 rows=150000 loops=1)
+ Planning Time: 0.032 ms
+ Execution Time: 33.634 ms
+(4 rows)
+
+EXPLAIN ANALYZE SELECT * FROM
+  ita_now(
+    'public',
+    'emp150k',
+    '{}',
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    ARRAY['salary', 'salary', 'salary', 'salary', 'salary'],
+    ARRAY['avg', 'sum', 'max', 'min', 'count']
+  ) AS (
+    avg numeric,
+    sum numeric,
+    max numeric,
+    min numeric,
+    count numeric,
+    effective tstzrange
+  );
+                                                      QUERY PLAN                                                      
+----------------------------------------------------------------------------------------------------------------------
+ Function Scan on ita_now  (cost=0.25..10.25 rows=1000 width=192) (actual time=79567.336..79567.350 rows=250 loops=1)
+ Planning Time: 0.035 ms
+ Execution Time: 79567.372 ms
+(3 rows)
+
+EXPLAIN ANALYZE SELECT * FROM
+  mwta_now(
+    'public',
+    'emp150k',
+    '{}',
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    ARRAY['salary', 'salary', 'salary', 'salary', 'salary'],
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    '5 hours'::interval
+  ) AS (
+    avg numeric,
+    sum numeric,
+    max numeric,
+    min numeric,
+    count numeric,
+    effective tstzrange
+  );
+                                                       QUERY PLAN                                                        
+-------------------------------------------------------------------------------------------------------------------------
+ Function Scan on mwta_now  (cost=0.25..10.25 rows=1000 width=192) (actual time=205916.930..205916.958 rows=499 loops=1)
+ Planning Time: 0.036 ms
+ Execution Time: 205916.991 ms
+(3 rows)
+
+EXPLAIN ANALYZE SELECT * FROM
+  sta_now(
+    'public',
+    'emp150k',
+    '{}',
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    ARRAY['salary', 'salary', 'salary', 'salary', 'salary'],
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    '1 week'::interval
+  ) AS (
+    avg numeric,
+    sum numeric,
+    max numeric,
+    min numeric,
+    count numeric,
+    effective tstzrange
+  );
+                                                    QUERY PLAN                                                     
+-------------------------------------------------------------------------------------------------------------------
+ Function Scan on sta_now  (cost=0.25..10.25 rows=1000 width=192) (actual time=4190.901..4190.904 rows=36 loops=1)
+ Planning Time: 0.035 ms
+ Execution Time: 4190.917 ms
+(3 rows)
+

@@ -16,7 +16,8 @@ REGRESS = _install_pg_bitemporal \
 		  unitemp_tmda_ci_base \
 		  unitemp_tmda_ci_cases \
 		  mwta_test \
-		  integration_test
+		  integration_test \
+		#   performance_test
 
 srcdir = $(pwd)
 
