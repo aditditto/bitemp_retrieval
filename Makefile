@@ -1,9 +1,9 @@
-MODULE_big = bitemp-retrieval
-EXTENSION = bitemp-retrieval
-DATA = bitemp-retrieval--0.0.1.sql
-DOCS = README.bitemp-retrieval
+MODULE_big = bitemp_retrieval
+EXTENSION = bitemp_retrieval
+DATA = bitemp_retrieval--0.0.1.sql
+DOCS = README.bitemp_retrieval
 
-OBJS = 	src/bitemp-retrieval.o \
+OBJS = 	src/bitemp_retrieval.o \
 		src/test.o
 
 PG_CONFIG = pg_config

@@ -1,4 +1,4 @@
 # get_sum postgresql extension
 default_version = '0.0.1'
-module_pathname = '$libdir/bitemp-retrieval'
+module_pathname = '$libdir/bitemp_retrieval'
 relocatable = false
