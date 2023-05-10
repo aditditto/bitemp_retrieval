@@ -1,0 +1,3 @@
+[submodule "pg_bitemporal"]
+	path = pg_bitemporal
+	url = https://github.com/hettie-d/pg_bitemporal.git

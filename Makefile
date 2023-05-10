@@ -6,6 +6,8 @@ DOCS = README.bitemp_retrieval
 OBJS = 	src/bitemp_retrieval.o \
 		src/test.o
 
+REGRESS = bitemp_time_contains_test
+
 PG_CONFIG = pg_config
 PGXS := $(shell $(PG_CONFIG) --pgxs)
 include $(PGXS)

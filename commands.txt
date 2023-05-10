@@ -1,5 +1,0 @@
-pg_lsclusters
-make
-make install
-make uninstall
-make clean
