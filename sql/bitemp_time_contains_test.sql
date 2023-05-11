@@ -1,3 +1,0 @@
-\echo HELLO FROM PLGSQL
-CREATE EXTENSION get_sum;
-SELECT get_sum(1::INT, 1::INT);
