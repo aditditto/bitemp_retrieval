@@ -22,3 +22,33 @@ BEGIN
 END;
 $BODY$
 LANGUAGE plpgsql;
+
+CREATE OR REPLACE
+FUNCTION bitemp_timeperiod_joinable(
+    a temporal_relationships.timeperiod,
+    b temporal_relationships.timeperiod
+    ) 
+RETURNS BOOLEAN
+AS
+$BODY$
+BEGIN
+  RETURN temporal_relationships.has_includes(a, b);
+END;
+$BODY$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE
+FUNCTION bitemp_timeperiod_join(
+    a temporal_relationships.timeperiod,
+    b temporal_relationships.timeperiod
+    ) 
+RETURNS temporal_relationships.timeperiod
+AS
+$BODY$
+BEGIN
+  RETURN a * b;
+END;
+$BODY$
+LANGUAGE plpgsql;
+
+-- create schema if not exists test_new_schema_by_extension;

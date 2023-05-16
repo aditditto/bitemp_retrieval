@@ -1,5 +1,4 @@
-\i pg_bitemporal/sql/_load_all.sql
-
+DROP EXTENSION bitemp_retrieval;
 CREATE EXTENSION bitemp_retrieval;
 
 -- Contains

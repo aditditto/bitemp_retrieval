@@ -7,3 +7,7 @@ build.sh
 .DS_Store
 *.tokens
 *.interp
+*.bc
+*.out
+*.out.diff
+*.diffs

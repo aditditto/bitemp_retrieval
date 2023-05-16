@@ -1,0 +1,1 @@
+\i ../pg_bitemporal/sql/_load_all.sql
