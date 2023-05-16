@@ -1,0 +1,1601 @@
+\i ../pg_bitemporal/sql/_load_all.sql
+\echo Start load all bitemporal code
+Start load all bitemporal code
+\set ON_ERROR_STOP on
+\pset pager off
+-- toggle timing to get a better idea of what is going on
+--\timing on
+set client_min_messages to warning;
+\ir extensions.sql
+begin;
+set local search_path to public;
+create extension if not exists btree_gist;
+commit;
+\ir relationships.sql
+begin;
+create schema if not exists temporal_relationships;
+grant usage on schema temporal_relationships to public;
+set local search_path to temporal_relationships, public;
+-- create a domain if not exists 
+DO $d$
+DECLARE
+  domain_range_name text default 'timeperiod';
+  domain_range_type text default 'tstzrange';
+  domain_i_name text default 'time_endpoint';
+  domain_i_type text default 'timestamptz';
+BEGIN
+-- Create timeperiod domain
+PERFORM n.nspname as "Schema",
+        t.typname as "Name",
+        pg_catalog.format_type(t.typbasetype, t.typtypmod) as "Type"
+FROM pg_catalog.pg_type t
+      LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+WHERE t.typtype = 'd'
+       AND n.nspname <> 'pg_catalog'
+       AND n.nspname <> 'information_schema'
+       AND pg_catalog.pg_type_is_visible(t.oid)
+   AND t.typname = domain_range_name;
+   if FOUND then
+     raise NOTICE 'Domain % already exists', domain_range_name;
+   else
+     execute format('create domain %I as %I', domain_range_name, domain_range_type);
+   end if;
+-- Create time_endpoint domain
+PERFORM n.nspname as "Schema",
+        t.typname as "Name",
+        pg_catalog.format_type(t.typbasetype, t.typtypmod) as "Type"
+FROM pg_catalog.pg_type t
+      LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+WHERE t.typtype = 'd'
+       AND n.nspname <> 'pg_catalog'
+       AND n.nspname <> 'information_schema'
+       AND pg_catalog.pg_type_is_visible(t.oid)
+   AND t.typname = domain_i_name;
+   if FOUND then
+     raise NOTICE 'Domain % already exists', domain_i_name;
+   else
+     execute format('create domain %I as %I', domain_i_name, domain_i_type);
+   end if;
+END;
+$d$;
+create or replace
+function timeperiod( p_range_start time_endpoint, p_range_end time_endpoint)
+RETURNS timeperiod
+language sql IMMUTABLE
+as
+$func$
+   select tstzrange(p_range_start, p_range_end,'[)')::timeperiod;
+$func$
+SET search_path = 'temporal_relationships';
+-- backwards compatible
+create or replace
+function timeperiod_range( _s time_endpoint, _e time_endpoint, _ignored text)
+returns timeperiod
+language sql
+as
+$func$
+   select timeperiod(_s,_e);
+$func$
+SET search_path = 'temporal_relationships';
+create or replace 
+function xor(a boolean, b boolean) returns boolean
+language sql IMMUTABLE
+as 
+$$ select  ( (not a) <> (not b)); $$;
+create or replace 
+function fst( x anyrange ) returns anyelement
+language SQL IMMUTABLE 
+as
+$$ select lower(x); $$;
+create or replace
+function snd( x anyrange ) returns anyelement
+language SQL IMMUTABLE 
+as
+$$ select upper(x); $$;
+--
+-- [starts] [starts^-1]
+--
+-- [starts A E]
+--  A  |---|
+--  E  |-------|
+--
+-- [starts^-1 A E]
+--  A  |-------|
+--  E  |---|
+--
+create or replace
+function has_starts(a timeperiod , b timeperiod )
+returns boolean language SQL IMMUTABLE 
+as $$
+  select fst(a) = fst(b) and snd(a) <> snd(b);
+$$
+SET search_path = 'temporal_relationships';
+--
+-- [finishes] [finishes^-1]
+--
+-- [finishes A E]
+--  A  |-------|
+--  E      |---|
+--
+-- [finishes^-1 A E]
+--  A      |---|
+--  E  |-------|
+--
+create or replace
+function has_finishes(a timeperiod, b timeperiod)
+returns boolean language SQL IMMUTABLE 
+as $$
+  select snd(a) = snd(b) and fst(a) <> fst(b);
+$$
+SET search_path = 'temporal_relationships';
+--
+-- [equals]
+--
+-- [equals A E]
+--  A  |----|
+--  E  |----|
+--
+create or replace
+function equals(a timeperiod, b timeperiod)
+returns boolean language SQL IMMUTABLE 
+as $$
+  -- doubtful = operator exists for timeperiod
+ select fst(a) = fst(b) and snd(a) = snd(b) ;
+$$
+SET search_path = 'temporal_relationships';
+--
+-- [during]
+--
+-- [during A E]
+--  A    |---|
+--  E  |-------|
+--
+create or replace
+function is_during(a timeperiod, b timeperiod)
+returns boolean language SQL IMMUTABLE 
+as $$
+  select (fst(a) > fst(b)) and (snd(a) < snd(b));
+$$
+SET search_path = 'temporal_relationships';
+--
+-- [during^-1] contained
+--
+-- [during^-1 A E]
+--  A  |-------|
+--  E    |---|
+--
+create or replace
+function is_contained_in(a timeperiod, b timeperiod)
+returns boolean language SQL IMMUTABLE 
+as $$
+  select is_during(b, a);
+$$
+SET search_path = 'temporal_relationships';
+--
+-- [during] or [during^-1] 
+--
+create or replace
+function has_during(a timeperiod, b timeperiod)
+returns boolean language SQL IMMUTABLE 
+as $$
+  select is_during(a, b) or is_during(b,a);
+$$
+SET search_path = 'temporal_relationships';
+--
+-- [overlaps]
+--
+-- [overlaps A E]
+--  A  |-----|
+--  E     |-----|
+--
+-- [overlaps^-1 A E]
+--  A     |-----|
+--  E  |-----|
+--
+create or replace
+function is_overlaps(a timeperiod, b timeperiod)
+returns boolean language SQL IMMUTABLE 
+as $$
+  select  fst(a) < fst(b) and snd(a) > fst(b) and snd(a) < snd(b);
+$$
+SET search_path = 'temporal_relationships';
+--
+-- either overlaps the other [overlaps] [overlaps^-1]
+--
+create or replace
+function has_overlaps(a timeperiod, b timeperiod)
+returns boolean language SQL IMMUTABLE 
+as $$
+  select  is_overlaps(a , b ) or is_overlaps(b , a ) ;
+$$
+SET search_path = 'temporal_relationships';
+--
+-- [before]
+--
+-- [before A E]
+--  A  |-----|
+--  E           |-----|
+--
+create or replace
+function is_before(a timeperiod, b timeperiod)
+returns boolean language SQL IMMUTABLE 
+as $$
+  select  snd(a) < fst(b);
+$$
+SET search_path = 'temporal_relationships';
+--
+-- [before^-1]
+--
+-- [before^-1 A E]
+--  A           |-----|
+--  E   |-----|
+--
+create or replace
+function is_after(a timeperiod, b timeperiod)
+returns boolean language SQL IMMUTABLE 
+as $$
+    -- is_before(b, a)
+   select snd(b) < fst(a);
+$$
+SET search_path = 'temporal_relationships';
+-- 
+-- either [before] [before^-1]
+-- 
+create or replace
+function has_before(a timeperiod, b timeperiod)
+returns boolean language SQL IMMUTABLE 
+as $$
+  select  snd(a) < fst(b) or snd(b) < fst(a);
+$$
+SET search_path = 'temporal_relationships';
+--
+-- [meets] [meets^-1]
+--
+-- no shared time tick.
+--
+-- [meets A E]
+--  A   |-----|
+--  E         |-----|
+--
+-- [meets^-1 A E]
+--  A         |-----|
+--  E   |-----|
+--
+create or replace
+function is_meets(a timeperiod, b timeperiod)
+returns boolean language SQL IMMUTABLE 
+as $$
+ select  snd(a) = fst(b) ;
+$$
+SET search_path = 'temporal_relationships';
+create or replace
+function has_meets(a timeperiod, b timeperiod)
+returns boolean language SQL IMMUTABLE 
+as $$
+  select snd(a) = fst(b) or snd(b) = fst(a);
+$$
+SET search_path = 'temporal_relationships';
+-- 
+-- Partition of Allen Relationships
+--
+-- 
+-- [Includes] 
+--     [Contains] or [Overlaps]
+create or replace
+function has_includes(a timeperiod, b timeperiod)
+returns boolean language SQL IMMUTABLE 
+as $$
+  select  fst(a) = fst(b) or snd(a) = snd(b) or 
+      (snd(a) <= snd(b) and (fst(a) >= fst(b) or fst(b) < snd(a))) or 
+        (snd(a) >= snd(b) and (fst(a) < snd(b) or fst(a) <= fst(b)));
+$$
+SET search_path = 'temporal_relationships';
+--
+-- [Contains]
+--    [Encloses] or [Equals]
+create or replace
+function has_contains(a timeperiod, b timeperiod)
+returns boolean language SQL IMMUTABLE 
+as $$
+ select fst(a) = fst(b) or snd(a) = snd(b) or 
+     (snd(a) < snd(b) and fst(a) > fst(b)) or 
+       (snd(b) < snd(a) and fst(b) > fst(a));
+$$
+SET search_path = 'temporal_relationships';
+--
+-- [Aligns With]
+--   [Starts] or [Finishes]
+--
+create or replace
+function has_aligns_with(a timeperiod, b timeperiod)
+returns boolean language SQL IMMUTABLE 
+as $$
+   select   xor( fst(a) = fst(b) , snd(a) = snd(b) );
+$$
+SET search_path = 'temporal_relationships';
+--
+-- [Encloses]
+--   [Aligns With] or [During]
+-- 
+create or replace
+function has_encloses(a timeperiod, b timeperiod)
+returns boolean language SQL IMMUTABLE 
+as $$
+  select has_during(a,b) or has_aligns_with(a,b);
+$$
+SET search_path = 'temporal_relationships';
+--
+-- [Excludes]
+--   [Before] or [Meets]
+--
+create or replace
+function has_excludes(a timeperiod, b timeperiod)
+returns boolean language SQL IMMUTABLE 
+as $$
+   select fst(a) >= snd(b) or fst(b) >= snd(a) ;
+$$
+SET search_path = 'temporal_relationships';
+commit;
+-- vim: set filetype=pgsql expandtab tabstop=2 shiftwidth=2:
+begin;
+set search_path to bitemporal_internal, public;
+\ir bitemporal_internal_schema.sql
+CREATE SCHEMA IF NOT EXISTS bitemporal_internal;
+grant usage on schema bitemporal_internal to public;
+\ir  metadata.sql
+-- 
+--
+--  triggers, not null, exclusions and check 
+-- all work exactly the same given the bitemporal constraints
+--
+-- 3 constraints do not. primary key, foreign key and unique constraints.
+--
+-- create the three types of constraints.
+--   need strings to include in a create table
+--   need commands to modify existing table
+-- find the a particular set of constraints given a table
+-- 
+create or replace 
+function bitemporal_internal.conname_prefix() returns text
+language sql IMMUTABLE as $f$ 
+    select 'bitemporal'::text;
+$f$;
+create or replace 
+function bitemporal_internal.mk_conname(con_type text, src_column text, fk_table text, fk_column text )
+returns text
+language sql IMMUTABLE
+as $f$ 
+select substring(format('%s %s %s%s%s', conname_prefix()
+                   , con_type
+                   , src_column
+                   , fk_table, fk_column)
+          from 0 for 64 );
+$f$
+SET search_path = 'bitemporal_internal';
+create or replace 
+function bitemporal_internal.mk_constraint(con_type text, con_name text, con_src text)
+returns text
+language sql IMMUTABLE
+as $ff$ 
+  select format($$CONSTRAINT %I check(true or '%s' <> '@%s@') $$
+        , con_name 
+        , con_type
+        , con_src)::text;
+$ff$;
+create or replace 
+function bitemporal_internal.pk_constraint(src_column text)
+returns text
+language sql IMMUTABLE as $f$
+  select mk_constraint('pk', mk_conname('pk', src_column, '', '') , src_column);
+$f$
+SET search_path = 'bitemporal_internal';
+create or replace
+function bitemporal_internal.fk_constraint(src_column text, fk_table text, fk_column text, connname text)
+returns text
+language sql IMMUTABLE
+as $ff$
+  select mk_constraint('fk'
+             , connname
+             , format('%s -> %s(%s)', src_column, fk_table, fk_column) );
+$ff$
+SET search_path = 'bitemporal_internal';
+create or replace 
+function bitemporal_internal.fk_constraint(src_column text, fk_table text, fk_column text)
+returns text
+language sql IMMUTABLE
+as $ff$ 
+  select fk_constraint(src_column , fk_table , fk_column,
+          mk_conname('fk', src_column, fk_table, fk_column));
+$ff$
+SET search_path = 'bitemporal_internal';
+create or replace 
+function bitemporal_internal.unique_constraint(src_column text)
+returns setof text
+language sql IMMUTABLE
+as $f$ 
+  values ( mk_constraint('u'
+             , mk_conname('u', src_column, '','')
+             , format('%s', src_column) )),
+       (format('CONSTRAINT %I EXCLUDE USING gist (%I WITH =, asserted WITH &&, effective WITH &&)'
+             , mk_conname('unique', src_column, '', '')
+             , src_column)::text)
+
+    ;
+--   CONSTRAINT devices_device_id_asserted_effective_excl EXCLUDE 
+--  USING gist (device_id WITH =, asserted WITH &&, effective WITH &&)
+$f$
+SET search_path = 'bitemporal_internal';
+create or replace 
+function bitemporal_internal.add_constraint(table_name text, _con text)
+returns text
+language sql IMMUTABLE
+as $f$ 
+  select format('alter table %s add %s', table_name, _con)::text; 
+$f$;
+create or replace 
+function bitemporal_internal.select_constraint_value(src text)
+returns  text
+language plpgsql IMMUTABLE
+as $f$ 
+DECLARE 
+  at int;
+  s   text;
+BEGIN
+-- select inside @ @
+  at := strpos(src, '@');
+  s  := substr(src, at + 1 );
+  at := strpos(s, '@');
+  return substring(s from 0::int for at );
+END;
+$f$;
+create
+type bitemporal_internal.bitemporal_pg_constraint
+as
+(
+oid	oid
+,conname	name
+,connamespace	oid
+,contype	"char"
+,condeferrable	bool
+,condeferred	bool
+,convalidated	bool
+,conrelid	oid
+,contypid	oid
+,conindid	oid
+-- ,conparentid	oid
+,confrelid	oid
+,confupdtype	"char"
+,confdeltype	"char"
+,confmatchtype	"char"
+,conislocal	bool
+,coninhcount	int4
+,connoinherit	bool
+,conkey	int2[]
+,confkey	int2[]
+,conpfeqop	oid[]
+,conppeqop	oid[]
+,conffeqop	oid[]
+,conexclop	oid[]
+,conbin	pg_node_tree
+, consrc	text
+);
+create or replace
+function bitemporal_internal.find_constraints(table_name text, _criteria text )
+returns setof  bitemporal_internal.bitemporal_pg_constraint
+language sql IMMUTABLE
+as $f$
+    select oid, conname, connamespace, contype,
+      condeferrable, condeferred,convalidated,
+  conrelid, contypid, conindid, /* conparentid,*/ confrelid,
+  confupdtype, confdeltype, confmatchtype, conislocal,
+  coninhcount	, connoinherit, conkey, confkey,
+  conpfeqop	, conppeqop	, conffeqop	, conexclop	, conbin
+       , pg_get_expr(conbin, conrelid) as consrc -- .pg_get_constraintdef()
+       from pg_constraint
+       where conrelid = cast(table_name as regclass)
+       and conname like format('%s %s %%', bitemporal_internal.conname_prefix(), _criteria )
+       ;
+$f$;
+create or replace 
+function bitemporal_internal.find_pk(table_name text)
+returns text
+language plpgsql IMMUTABLE
+as $f$ 
+DECLARE
+    r  record;
+BEGIN
+    select * into r from bitemporal_internal.find_constraints(table_name, 'pk');
+    RETURN bitemporal_internal.select_constraint_value(r.consrc);
+END;
+$f$;
+create table if not exists bitemporal_internal.fk_constraint_type (
+   conname name
+  , src_column  name
+  , fk_table text
+  , fk_column name
+);
+create or replace 
+function bitemporal_internal.split_out_fk(consrc text)
+returns bitemporal_internal.fk_constraint_type
+language plpgsql IMMUTABLE
+as $f$ 
+DECLARE
+    src text;
+    ref text;
+    rc  fk_constraint_type%ROWTYPE;
+    rp int;
+    lp int;
+BEGIN
+    -- format('%s -> %s(%s)', src_column, fk_table, fk_column) 
+    src := select_constraint_value(consrc) ;
+    rc.src_column :=  split_part(src, ' ', 1);
+    ref := split_part(src, ' ', 3);
+    rp := strpos(ref, '(');
+    lp := strpos(ref, ')');
+    if (lp < 1 or rp < 1 ) then
+      raise notice 'split_out_bitemporal_fk: invaild format "%"', consrc ;
+      return NULL;
+    end if;
+    rc.fk_table := substring(ref from 0 for rp );
+    rc.fk_column :=  substring(ref from rp +1 for (lp - rp -1) );
+    RETURN rc;
+END;
+$f$
+SET search_path = 'bitemporal_internal';
+create or replace
+function bitemporal_internal.find_fk(table_name text)
+returns setof bitemporal_internal.fk_constraint_type
+language plpgsql
+as $f$ 
+DECLARE
+    rc  bitemporal_internal.fk_constraint_type%ROWTYPE;
+    r record;
+BEGIN
+    
+    for r in select * from bitemporal_internal.find_constraints(table_name, 'fk')
+    loop
+        rc := bitemporal_internal.split_out_fk(r.consrc);
+        rc.conname := r.conname;
+        return next  rc;
+    end loop;
+    RETURN ;
+END;
+$f$;
+/*
+       conname       | contype | conrelid |
+consrc                                          
+---------------------+---------+----------+-----------------------------------------------------------------------------------------
+ bitemporal fk 1     | c       |  1625561 | (true OR ('fk'::text <> '@node_id -> sg.networks network_id@'::text))
+ bitemporal fk 2     | c       |  1625561 | (true OR ('fk'::text = ANY (ARRAY['node_id'::text, 'cnu.networks'::text, 'id'::text])))
+ bitemporal unique 3 | c       |  1625561 | (true OR ('col'::text = 'name'::text))
+
+*/
+-- vim: set filetype=pgsql expandtab tabstop=2 shiftwidth=2:
+\ir ll_create_bitemporal_table.sql
+CREATE OR REPLACE FUNCTION bitemporal_internal.ll_create_bitemporal_table(
+    p_schema text,
+    p_table text,
+    p_table_definition text,
+    p_business_key text)
+  RETURNS boolean AS
+$BODY$
+DECLARE 
+v_business_key_name text;
+v_business_key_gist text;
+v_serial_key_name text;
+v_serial_key text;
+v_pk_constraint_name text;
+v_table_definition text;
+v_error text;
+v_business_key_array text[];
+i int;
+BEGIN
+v_serial_key :=p_table||'_key';
+v_serial_key_name :=v_serial_key ||' serial';
+v_pk_constraint_name:= p_table||'_pk';
+v_business_key_name :=p_table||'_'||translate(p_business_key, ', ','_')||'_assert_eff_excl';
+v_business_key_gist :=replace(p_business_key, ',',' WITH =,')||' WITH =, asserted WITH &&, effective WITH &&';
+--raise notice 'gist %',v_business_key_gist;
+v_table_definition :=replace (p_table_definition, ' serial', ' integer');
+v_business_key_array :=string_to_array(p_business_key, ',');
+
+EXECUTE format($create$
+CREATE TABLE %s.%s (
+                 %s
+                 ,%s
+                 ,effective temporal_relationships.timeperiod NOT NULL
+                 ,asserted temporal_relationships.timeperiod  NOT NULL
+                 ,row_created_at timestamptz NOT NULL DEFAULT now()
+                 ,CONSTRAINT %s PRIMARY KEY (%s)
+                 ,CONSTRAINT %s EXCLUDE 
+                   USING gist (%s)
+                    )
+                 $create$
+                 ,p_schema
+                 ,p_table
+                 ,v_serial_key_name
+                 ,v_table_definition
+                  ,v_pk_constraint_name
+                  ,v_serial_key
+                 ,v_business_key_name
+                 ,v_business_key_gist
+                 ) ;
+ i:=1;     
+ while v_business_key_array[i] is not null loop    
+ execute   format($alter$
+    ALTER TABLE %s.%s ALTER %s SET NOT NULL
+                 $alter$
+                 ,p_schema
+                 ,p_table               
+                 ,v_business_key_array[i]
+                 ) ;   
+     i:=i+1;            
+     end loop;                       
+ RETURN ('true');  
+ EXCEPTION WHEN OTHERS THEN
+GET STACKED DIAGNOSTICS v_error = MESSAGE_TEXT;                          
+raise notice '%', v_error;
+RETURN ('false');             
+END;
+$BODY$
+  LANGUAGE plpgsql;
+\ir ll_bitemporal_list_of_fields.sql
+create or replace function  bitemporal_internal.generate_ll_bitemporal_list_of_fields()
+returns boolean as
+$GBODY$
+DECLARE v_sql text;
+begin
+IF current_setting('server_version_num')::int <120000
+THEN 
+v_sql:=
+$txt$ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_list_of_fields(p_table text) RETURNS text[]
+AS
+$BODY$
+BEGIN
+RETURN ( array(SELECT attname
+                          FROM (SELECT * FROM pg_attribute
+                                  WHERE attrelid=p_table::regclass AND attnum >0) pa
+                          LEFT OUTER JOIN pg_attrdef pad ON adrelid=p_table::regclass
+                                                        AND adrelid=attrelid
+                                                        AND pa.attnum=pad.adnum
+                          WHERE (adsrc NOT LIKE 'nextval%' OR adsrc IS NULL)
+                                AND attname !='asserted'
+                                AND attname !='effective'
+                                AND attname !='row_created_at'
+                                and attname not like '%dropped%'
+                        ORDER BY pa.attnum));
+END;                        
+$BODY$ LANGUAGE plpgsql
+$txt$ ;
+else  v_sql:=
+$txt$
+CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_list_of_fields(p_table text) RETURNS text[]
+AS
+$BODY$
+BEGIN
+RETURN ( array(SELECT attname
+                          FROM (SELECT * FROM pg_attribute
+                                  WHERE attrelid=p_table::regclass AND attnum >1) pa
+                          LEFT OUTER JOIN pg_attrdef pad ON adrelid=p_table::regclass
+                                                        AND adrelid=attrelid
+                                                        AND pa.attnum=pad.adnum
+                          WHERE  attname !='asserted'
+                                AND attname !='effective'
+                                AND attname !='row_created_at'
+                                AND attname not like '%dropped%'
+                        ORDER BY pa.attnum));
+END;                        
+$BODY$ LANGUAGE plpgsql
+$txt$;
+
+end if;
+
+execute (v_sql);
+return  null;
+
+end;
+$GBODY$ LANGUAGE plpgsql;
+select * from  bitemporal_internal.generate_ll_bitemporal_list_of_fields();
+ generate_ll_bitemporal_list_of_fields 
+---------------------------------------
+ 
+(1 row)
+
+drop function bitemporal_internal.generate_ll_bitemporal_list_of_fields();
+\ir ll_is_bitemporal_table.sql
+CREATE OR REPLACE FUNCTION bitemporal_internal.ll_is_bitemporal_table(p_table text) RETURNS boolean   immutable
+AS
+ $$
+DECLARE 
+v_schemaname text;
+v_tablename text;
+BEGIN  
+        SELECT split_part(p_table, '.', 1) INTO v_schemaname;
+        SELECT split_part(p_table, '.', 2) INTO v_tablename;
+ RETURN 
+ (  SELECT 
+         coalesce(max(CASE WHEN a.attname='asserted' THEN 1 ELSE 0 END),0) +
+         coalesce(max(CASE WHEN a.attname='effective' THEN 1 ELSE 0 END),0)=2
+         AND exists (select 1 from pg_attribute ac
+          JOIN pg_class cc
+                     ON ac.attrelid=cc.oid
+                     and  ac.attname='row_created_at'
+                     JOIN pg_namespace n ON n.oid = cc.relnamespace
+                     and n.nspname=v_schemaname AND  cc.relname=v_tablename)
+   FROM pg_class c 
+     JOIN pg_namespace n ON n.oid = c.relnamespace and relkind='i'
+     join pg_am am ON am.oid=c.relam
+     join pg_index x ON c.oid=x.indexrelid 
+     and amname='gist'
+     and indisexclusion='true'
+     JOIN pg_class cc ON cc.oid = x.indrelid
+     join pg_attribute a ON a.attrelid=c.oid
+     join pg_type t ON a.atttypid=t.oid
+  --   join pg_attribute ac ON ac.attrelid=cc.oid
+ WHERE  n.nspname=v_schemaname AND  cc.relname=v_tablename);
+  END;    
+$$ LANGUAGE plpgsql;
+\ir ll_check_bitemporal_update_conditions.sql
+CREATE OR REPLACE FUNCTION bitemporal_internal.ll_check_bitemporal_update_conditions(p_table text
+,p_search_fields TEXT  -- search fields
+,p_search_values TEXT  --  search values
+,p_effective temporal_relationships.timeperiod  -- effective range of the update
+) 
+RETURNS integer
+AS
+$BODY$
+DECLARE 
+v_records_found integer;
+---currently do not support checks for future assertion after existing future assertion
+BEGIN 
+EXECUTE format($s$ SELECT count(*) 
+    FROM %s WHERE ( %s )=( %s ) AND  (temporal_relationships.is_overlaps(effective::temporal_relationships.timeperiod, %L::temporal_relationships.timeperiod)
+                                       OR 
+                                       temporal_relationships.is_meets(effective::temporal_relationships.timeperiod, %L::temporal_relationships.timeperiod)
+                                       OR 
+                                       temporal_relationships.has_finishes(effective::temporal_relationships.timeperiod, %L::temporal_relationships.timeperiod))
+                                       AND now()<@ asserted  $s$ 
+          , p_table
+          , p_search_fields
+          , p_search_values
+          , p_effective
+          , p_effective
+          , p_effective) INTO v_records_found;
+RETURN v_records_found;          
+END;    
+$BODY$ LANGUAGE plpgsql;
+\ir ll_bitemporal_correction.sql
+ 
+  CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_correction(p_schema_name text,
+    p_table_name text,
+    p_list_of_fields text,
+    p_list_of_values text,
+    p_search_fields text,
+    p_search_values text,
+    p_effective temporal_relationships.timeperiod,
+    p_now temporal_relationships.time_endpoint )
+  RETURNS integer AS
+$BODY$
+DECLARE
+v_sql  text;
+  v_rowcount INTEGER:=0;
+  v_list_of_fields_to_insert text;
+  v_table_attr text[];
+  v_now temporal_relationships.time_endpoint:=p_now ;-- for compatiability with the previous version
+  v_serial_key text:=p_table_name||'_key';
+  v_table text:=p_schema_name||'.'||p_table_name;
+  v_effective_start temporal_relationships.time_endpoint:=lower(p_effective) ;
+  v_keys int[];
+  v_keys_old  int[];
+BEGIN
+ v_table_attr := bitemporal_internal.ll_bitemporal_list_of_fields(v_table);
+ IF  array_length(v_table_attr,1)=0
+      THEN RAISE EXCEPTION 'Empty list of fields for a table: %', v_table; 
+  RETURN v_rowcount;
+ END IF;
+
+ v_list_of_fields_to_insert:= array_to_string(v_table_attr, ',','');
+ EXECUTE 
+ format($u$ WITH updt AS (UPDATE %s SET asserted = temporal_relationships.timeperiod_range(lower(asserted), %L, '[)')
+                    WHERE ( %s )=( %s ) AND  %L=lower(effective)
+                          AND upper(asserted)='infinity' 
+                          AnD lower(asserted)<%L returning %s )
+                                      SELECT array_agg(%s) FROM updt
+                                      $u$  --end assertion period for the old record(s), if any
+          , v_table
+          , v_now
+          , p_search_fields
+          , p_search_values
+          , v_effective_start
+          , v_now
+          , v_serial_key
+          , v_serial_key) into v_keys_old;
+ --       raise notice 'sql%', v_sql;  
+
+ EXECUTE 
+-- v_sql:=
+ format($i$WITH inst AS (INSERT INTO %s ( %s, effective, asserted )
+                SELECT %s ,effective, temporal_relationships.timeperiod_range(upper(asserted), 'infinity', '[)')
+                  FROM %s WHERE ( %s )IN ( %s ) 
+                                returning %s )
+                                    SELECT array_agg(%s) FROM inst $i$  --insert new assertion rage with old values where applicable 
+          , v_table
+          , v_list_of_fields_to_insert
+          , v_list_of_fields_to_insert
+          , v_table
+          , v_serial_key
+          , coalesce(array_to_string(v_keys_old,','),'NULL')
+          , v_serial_key
+          , v_serial_key
+)into v_keys;
+--raise notice 'sql%', v_sql;  
+
+--raise notice 'sql%', v_sql;  
+if coalesce(array_to_string(v_keys_old,',')) IS NULL 
+   then 
+EXECUTE   format($uu$UPDATE %s SET ( %s ) = (SELECT %s ) WHERE ( %s ) = ( %s )
+                           AND effective = %L
+                           AND upper(asserted)='infinity'
+                            $uu$  --update new assertion rage with new values
+          , v_table
+          , p_list_of_fields
+          , p_list_of_values
+          , p_search_fields
+          , p_search_values
+          , p_effective
+     ) 
+	;
+
+ELSE 
+ EXECUTE 
+-- v_sql:=   
+ format($uu$UPDATE %s SET ( %s ) = ( SELECT %s ) WHERE ( %s ) IN ( %s )
+                           $uu$  --update new assertion rage with new values
+          , v_table
+          , p_list_of_fields
+          , p_list_of_values
+          , v_serial_key
+          ,coalesce(array_to_string(v_keys,','), 'NULL'));
+          
+   --  raise notice 'sql%', v_sql; 
+ END IF;  
+ GET DIAGNOSTICS v_rowcount:=ROW_COUNT; 
+
+ RETURN v_rowcount;
+END;
+$BODY$
+  LANGUAGE plpgsql VOLATILE; 
+  
+ 
+ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_correction(p_schema_name text,
+    p_table_name text,
+    p_list_of_fields text,
+    p_list_of_values text,
+    p_search_fields text,
+    p_search_values text,
+    p_effective temporal_relationships.timeperiod)
+  RETURNS integer AS
+  $BODY$
+  declare v_rowcount int;
+  begin
+   select * into v_rowcount from  bitemporal_internal.ll_bitemporal_correction(p_schema_name ,
+    p_table_name ,
+    p_list_of_fields ,
+    p_list_of_values ,
+    p_search_fields ,
+    p_search_values,
+    p_effective ,
+    clock_timestamp() );
+    return v_rowcount;
+    END;
+$BODY$
+  LANGUAGE plpgsql VOLATILE;
+ 
+\ir ll_bitemporal_delete.sql
+CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_delete(p_table text
+, p_search_fields TEXT  -- search fields
+, p_search_values TEXT  --  search values
+, p_asserted temporal_relationships.timeperiod -- will be asserted
+)
+RETURNS INTEGER
+AS
+$BODY$
+DECLARE
+v_rowcount INTEGER:=0;
+BEGIN 
+--end assertion period for the current records record(s)
+
+EXECUTE format($u$ UPDATE %s SET asserted =
+temporal_relationships.timeperiod(lower(asserted), lower(%L::temporal_relationships.timeperiod))
+                    WHERE ( %s )=( %s )AND lower(%L::temporal_relationships.timeperiod)<@ asserted  $u$
+          , p_table
+          , p_asserted
+          , p_search_fields   
+          , p_search_values
+          , p_asserted
+          );
+          
+
+GET DIAGNOSTICS v_rowcount:=ROW_COUNT; 
+RETURN v_rowcount;
+END;
+$BODY$ LANGUAGE plpgsql;
+\ir ll_bitemporal_inactivate.sql
+ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_inactivate(p_schema_name text,
+  p_table_name text
+, p_search_fields TEXT  -- search fields
+, p_search_values TEXT  --  search values
+, p_effective temporal_relationships.timeperiod -- inactive starting
+, p_asserted temporal_relationships.timeperiod -- will be asserted
+)
+RETURNS INTEGER
+AS
+$BODY$
+DECLARE
+v_sql text ;
+v_rowcount INTEGER:=0;
+v_list_of_fields_to_insert text:=' ';
+v_list_of_fields_to_insert_excl_effective text;
+v_table_attr text[];
+v_now timestamptz:=now();-- so that we can reference this time
+  v_keys int[];
+  v_keys_old  int[];
+  v_serial_key text:=p_table_name||'_key';
+  v_table text:=p_schema_name||'.'||p_table_name;
+ 
+BEGIN 
+ IF lower(p_asserted)<v_now::date --should we allow this precision?...
+    OR upper(p_asserted)< 'infinity'
+ THEN RAISE EXCEPTION'Asserted interval starts in the past or has a finite end: %', p_asserted
+  ; 
+  RETURN v_rowcount;
+ END IF;
+/* IF (bitemporal_internal.ll_check_bitemporal_update_conditions(p_table 
+                                                       ,p_search_fields 
+                                                       ,p_search_values
+                                                       ,p_effective)  =0 )
+ THEN RAISE EXCEPTION'Nothing to inactivate: % = %, effective %', p_search_fields, p_search_values, p_effective; 
+  RETURN v_rowcount;
+ END IF;   
+*/
+v_table_attr := bitemporal_internal.ll_bitemporal_list_of_fields(v_table);
+IF  array_length(v_table_attr,1)=0
+      THEN RAISE EXCEPTION 'Empty list of fields for a table: %', v_table; 
+  RETURN v_rowcount;
+ END IF;
+v_list_of_fields_to_insert_excl_effective:= array_to_string(v_table_attr, ',','');
+v_list_of_fields_to_insert:= v_list_of_fields_to_insert_excl_effective||',effective';
+  
+
+--end assertion period for the old record(s)
+
+EXECUTE
+ format($u$ WITH updt AS (UPDATE %s SET asserted =
+            temporal_relationships.timeperiod(lower(asserted), lower(%L::temporal_relationships.timeperiod))
+                    WHERE ( %s )=( %s ) AND (temporal_relationships.is_overlaps(effective, %L)
+                                       OR 
+                                       temporal_relationships.is_meets(effective, %L)
+                                       OR 
+                                       temporal_relationships.has_finishes(effective, %L))
+                                      AND ---now()<@ asserted  
+                                       (temporal_relationships.is_overlaps(asserted, %L) 
+                                       OR 
+                                       temporal_relationships.has_finishes(asserted, %L)) returning %s )
+                                      SELECT array_agg(%s) FROM updt
+                                      $u$  
+          , v_table
+          , p_asserted
+          , p_search_fields
+          , p_search_values
+          , p_effective
+          , p_effective
+          , p_effective
+          , p_asserted
+          ,p_asserted
+          , v_serial_key
+          , v_serial_key) into v_keys_old;
+          
+ --insert new assertion range with old values and effective-ended
+ 
+ 
+ 
+EXECUTE format($i$INSERT INTO %s ( %s, effective, asserted )
+                SELECT %s ,temporal_relationships.timeperiod(lower(effective), lower(%L::temporal_relationships.timeperiod)) ,%L
+                  FROM %s WHERE ( %s )in ( %s )  $i$
+          , v_table
+          , v_list_of_fields_to_insert_excl_effective
+          , v_list_of_fields_to_insert_excl_effective
+          , p_effective
+          , p_asserted
+          , v_table
+          , v_serial_key
+          , coalesce(array_to_string(v_keys_old,','),'NULL')
+);
+
+
+
+GET DIAGNOSTICS v_rowcount:=ROW_COUNT; 
+RETURN v_rowcount;
+END;
+$BODY$ LANGUAGE plpgsql;
+\ir ll_bitemporal_insert.sql
+CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_insert(p_table text
+,p_list_of_fields text
+,p_list_of_values TEXT
+,p_effective temporal_relationships.timeperiod 
+,p_asserted temporal_relationships.timeperiod ) 
+RETURNS INTEGER
+AS
+ $BODY$
+DECLARE
+v_rowcount INTEGER;
+BEGIN
+ EXECUTE format ($i$INSERT INTO %s (%s, effective, asserted )  
+                 VALUES (%s,%L,%L) RETURNING * $i$
+                ,p_table
+                ,p_list_of_fields
+                ,p_list_of_values
+                ,p_effective
+                ,p_asserted) ;
+     GET DIAGNOSTICS v_rowcount:=ROW_COUNT; 
+     RETURN v_rowcount;         
+     END;    
+$BODY$ LANGUAGE plpgsql;
+\ir ll_bitemporal_insert_select.sql
+CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_insert_select(p_table text
+,p_list_of_fields text
+,p_select TEXT
+,p_effective temporal_relationships.timeperiod 
+,p_asserted temporal_relationships.timeperiod ) 
+RETURNS INTEGER
+AS
+ $BODY$
+DECLARE
+v_rowcount INTEGER;
+BEGIN
+ EXECUTE format ($i$INSERT INTO %s (%s, effective, asserted )  
+                 select a.*, %L,%L
+                 from (%s) a RETURNING * $i$
+                ,p_table
+                ,p_list_of_fields
+                ,p_effective
+                ,p_asserted
+                ,p_select) ;
+     GET DIAGNOSTICS v_rowcount:=ROW_COUNT; 
+     RETURN v_rowcount;         
+     END;    
+$BODY$ LANGUAGE plpgsql;
+\ir ll_bitemporal_update.sql
+CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update(p_schema_name text
+,p_table_name text
+,p_list_of_fields text -- fields to update
+,p_list_of_values TEXT  -- values to update with
+,p_search_fields TEXT  -- search fields
+,p_search_values TEXT  --  search values
+,p_effective temporal_relationships.timeperiod  -- effective range of the update
+,p_asserted temporal_relationships.timeperiod  -- assertion for the update
+) 
+RETURNS INTEGER
+AS
+$BODY$
+DECLARE
+v_rowcount INTEGER:=0;
+v_list_of_fields_to_insert text:=' ';
+v_list_of_fields_to_insert_excl_effective text;
+v_table_attr text[];
+v_serial_key text:=p_table_name||'_key';
+v_table text:=p_schema_name||'.'||p_table_name;
+v_keys_old int[];
+v_keys int[];
+v_now timestamptz:=now();-- so that we can reference this time
+BEGIN 
+ IF lower(p_asserted)<v_now::date --should we allow this precision?...
+    OR upper(p_asserted)< 'infinity'
+ THEN RAISE EXCEPTION'Asserted interval starts in the past or has a finite end: %', p_asserted
+  ; 
+  RETURN v_rowcount;
+ END IF;  
+
+v_table_attr := bitemporal_internal.ll_bitemporal_list_of_fields(v_table);
+IF  array_length(v_table_attr,1)=0
+      THEN RAISE EXCEPTION 'Empty list of fields for a table: %', v_table; 
+  RETURN v_rowcount;
+ END IF;
+v_list_of_fields_to_insert_excl_effective:= array_to_string(v_table_attr, ',','');
+v_list_of_fields_to_insert:= v_list_of_fields_to_insert_excl_effective||',effective';
+
+--end assertion period for the old record(s)
+
+EXECUTE format($u$ WITH updt AS (UPDATE %s SET asserted =
+            temporal_relationships.timeperiod(lower(asserted), lower(%L::temporal_relationships.timeperiod))
+                    WHERE ( %s )=( %s ) AND (temporal_relationships.is_overlaps(effective, %L)
+                                       OR 
+                                       temporal_relationships.is_meets(effective::temporal_relationships.timeperiod, %L)
+                                       OR 
+                                       temporal_relationships.has_finishes(effective::temporal_relationships.timeperiod, %L))
+                                      AND now()<@ asserted  returning %s )
+                                      SELECT array_agg(%s) FROM updt
+                                      $u$  
+          , v_table
+          , p_asserted
+          , p_search_fields
+          , p_search_values
+          , p_effective
+          , p_effective
+          , p_effective
+          , v_serial_key
+          , v_serial_key) into v_keys_old;
+
+ --insert new assertion rage with old values and effective-ended
+EXECUTE format($i$INSERT INTO %s ( %s, effective, asserted )
+                SELECT %s ,temporal_relationships.timeperiod(lower(effective), lower(%L::temporal_relationships.timeperiod)) ,%L
+                  FROM %s WHERE ( %s )in ( %s )  $i$
+          , v_table
+          , v_list_of_fields_to_insert_excl_effective
+          , v_list_of_fields_to_insert_excl_effective
+          , p_effective
+          , p_asserted
+          , v_table
+          , v_serial_key
+          ,coalesce(array_to_string(v_keys_old,','), 'NULL')
+         
+);
+
+
+---insert new assertion rage with old values and new effective range
+ 
+ EXECUTE 
+  format($i$ WITH inst AS (INSERT INTO %s ( %s, effective, asserted )
+                  SELECT %s ,%L, %L
+                   FROM %s WHERE ( %s )in (%s )  returning %s )
+                                    SELECT array_agg(%s) FROM inst
+                                      $i$
+          , v_table
+          , v_list_of_fields_to_insert_excl_effective
+          , v_list_of_fields_to_insert_excl_effective
+          , p_effective
+          , p_asserted
+          , v_table
+          , v_serial_key
+          , coalesce(array_to_string(v_keys_old,','), 'NULL')
+          , v_serial_key
+          , v_serial_key
+) 
+into v_keys;
+
+--update new record(s) in new assertion rage with new values                                  
+                                  
+EXECUTE 
+--v_sql :=
+format($u$ UPDATE %s SET (%s) = ( SELECT %s) 
+                    WHERE ( %s )in ( %s ) $u$  
+          , v_table
+          , p_list_of_fields
+          , p_list_of_values
+          , v_serial_key
+          ,coalesce(array_to_string(v_keys,','), 'NULL'));
+          
+GET DIAGNOSTICS v_rowcount:=ROW_COUNT;  
+
+RETURN v_rowcount;
+END;    
+$BODY$ LANGUAGE plpgsql;
+\ir ll_bitemporal_update_select.sql
+CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update_select(p_table text
+,p_list_of_fields text -- fields to update
+,p_values_selected_update TEXT  -- values to update with
+,p_search_fields TEXT  -- search fields
+,p_values_selected_search TEXT  --  search values selected
+,p_effective temporal_relationships.timeperiod  -- effective range of the update
+,p_asserted temporal_relationships.timeperiod  -- assertion for the update
+) 
+RETURNS INTEGER
+AS
+$BODY$
+DECLARE
+v_rowcount INTEGER:=0;
+v_list_of_fields_to_insert text:=' ';
+v_list_of_fields_to_insert_excl_effective text;
+v_table_attr text[];
+v_now timestamptz:=now();-- so that we can reference this time
+BEGIN 
+ IF lower(p_asserted)<v_now::date --should we allow this precision?...
+    OR upper(p_asserted)< 'infinity'
+ THEN RAISE EXCEPTION'Asserted interval starts in the past or has a finite end: %', p_asserted
+  ; 
+  RETURN v_rowcount;
+ END IF;
+v_table_attr := bitemporal_internal.ll_bitemporal_list_of_fields(p_table);
+IF  array_length(v_table_attr,1)=0
+      THEN RAISE EXCEPTION 'Empty list of fields for a table: %', p_table; 
+  RETURN v_rowcount;
+ END IF;
+v_list_of_fields_to_insert_excl_effective:= array_to_string(v_table_attr, ',','');
+v_list_of_fields_to_insert:= v_list_of_fields_to_insert_excl_effective||',effective';
+
+--end assertion period for the old record(s)
+
+EXECUTE format($u$ UPDATE %s t    SET asserted =
+            temporal_relationships.timeperiod(lower(asserted), lower(%L::temporal_relationships.timeperiod))
+                    WHERE ( %s )in( %s ) AND (temporal_relationships.is_overlaps(effective, %L)
+                                       OR 
+                                       temporal_relationships.is_meets(effective::temporal_relationships.timeperiod, %L)
+                                       OR 
+                                       temporal_relationships.has_finishes(effective::temporal_relationships.timeperiod, %L))
+                                      AND now()<@ asserted  $u$  
+          , p_table
+          , p_asserted
+          , p_search_fields
+          , p_values_selected_search
+          , p_effective
+          , p_effective
+          , p_effective);
+
+ --insert new assertion rage with old values and effective-ended
+EXECUTE format($i$INSERT INTO %s ( %s, effective, asserted )
+                SELECT %s ,temporal_relationships.timeperiod(lower(effective), lower(%L::temporal_relationships.timeperiod)) ,%L
+                  FROM %s WHERE ( %s )in( %s ) AND (temporal_relationships.is_overlaps(effective, %L)
+                                       OR 
+                                       temporal_relationships.is_meets(effective, %L)
+                                       OR 
+                                       temporal_relationships.has_finishes(effective, %L))
+                                      AND upper(asserted)=lower(%L::temporal_relationships.timeperiod) $i$
+          , p_table
+          , v_list_of_fields_to_insert_excl_effective
+          , v_list_of_fields_to_insert_excl_effective
+          , p_effective
+          , p_asserted
+          , p_table
+          , p_search_fields
+          , p_values_selected_search
+          , p_effective
+          , p_effective
+          , p_effective
+          , p_asserted
+);
+
+
+---insert new assertion rage with old values and new effective range
+ 
+EXECUTE format($i$INSERT INTO %s ( %s, effective, asserted )
+                SELECT %s ,%L, %L
+                  FROM %s WHERE ( %s )in( %s ) AND (temporal_relationships.is_overlaps(effective, %L)
+                                       OR 
+                                       temporal_relationships.is_meets(effective, %L)
+                                       OR 
+                                       temporal_relationships.has_finishes(effective, %L))
+                                      AND upper(asserted)=lower(%L::temporal_relationships.timeperiod) $i$
+          , p_table
+          , v_list_of_fields_to_insert_excl_effective
+          , v_list_of_fields_to_insert_excl_effective
+          , p_effective
+          , p_asserted
+          , p_table
+          , p_search_fields
+          , p_values_selected_search
+          , p_effective
+          , p_effective
+          , p_effective
+          , p_asserted
+);
+
+--update new record(s) in new assertion rage with new values                                  
+                                  
+EXECUTE format($u$ UPDATE %s t SET (%s) = (%s) 
+                    WHERE ( %s ) in ( %s ) AND effective=%L
+                                        AND asserted=%L $u$  
+          , p_table
+          , p_list_of_fields
+          , p_values_selected_update
+          , p_search_fields
+          , p_values_selected_search
+          , p_effective
+          , p_asserted);
+          
+GET DIAGNOSTICS v_rowcount:=ROW_COUNT;  
+RETURN v_rowcount;
+END;    
+$BODY$ LANGUAGE plpgsql;
+CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update_select(p_schema_name text,
+ p_table_name  text
+,p_list_of_fields text -- fields to update
+,p_values_selected_update TEXT  -- values to update with
+,p_search_fields TEXT  -- search fields
+,p_values_selected_search TEXT  --  search values selected
+,p_effective temporal_relationships.timeperiod  -- effective range of the update
+,p_asserted temporal_relationships.timeperiod  -- assertion for the update
+) 
+RETURNS INTEGER
+AS
+$BODY$
+DECLARE
+v_rowcount INTEGER:=0;
+v_list_of_fields_to_insert text:=' ';
+v_list_of_fields_to_insert_excl_effective text;
+v_table_attr text[];
+v_serial_key text:=p_table_name||'_key';
+v_table text:=p_schema_name||'.'||p_table_name;
+v_keys_old int[];
+v_keys int[];
+v_now timestamptz:=now();-- so that we can reference this time
+BEGIN 
+ IF lower(p_asserted)<v_now::date --should we allow this precision?...
+    OR upper(p_asserted)< 'infinity'
+ THEN RAISE EXCEPTION'Asserted interval starts in the past or has a finite end: %', p_asserted
+  ; 
+  RETURN v_rowcount;
+ END IF;
+v_table_attr := bitemporal_internal.ll_bitemporal_list_of_fields(v_table);
+IF  array_length(v_table_attr,1)=0
+      THEN RAISE EXCEPTION 'Empty list of fields for a table: %', v_table; 
+  RETURN v_rowcount;
+ END IF;
+v_list_of_fields_to_insert_excl_effective:= array_to_string(v_table_attr, ',','');
+v_list_of_fields_to_insert:= v_list_of_fields_to_insert_excl_effective||',effective';
+
+--end assertion period for the old record(s)
+
+EXECUTE format($u$ WITH updt AS (UPDATE %s t SET asserted =
+            temporal_relationships.timeperiod(lower(asserted), lower(%L::temporal_relationships.timeperiod))
+                    WHERE ( %s )in( %s ) AND (temporal_relationships.is_overlaps(effective, %L)
+                                       OR 
+                                       temporal_relationships.is_meets(effective::temporal_relationships.timeperiod, %L)
+                                       OR 
+                                       temporal_relationships.has_finishes(effective::temporal_relationships.timeperiod, %L))
+                                      AND now()<@ asserted returning %s )
+                                      SELECT array_agg(%s) FROM updt
+                                      $u$  
+          , v_table
+          , p_asserted
+          , p_search_fields
+          , p_values_selected_search
+          , p_effective
+          , p_effective
+          , p_effective
+          , v_serial_key
+          , v_serial_key) into v_keys_old;
+  if v_keys_old is null then 
+  return 0;
+end if;        
+
+ --insert new assertion rage with old values and effective-ended
+EXECUTE format($i$INSERT INTO %s ( %s, effective, asserted )
+                SELECT %s ,temporal_relationships.timeperiod(lower(effective), lower(%L::temporal_relationships.timeperiod)) ,%L
+                  FROM %s WHERE ( %s )in( %s )
+                                       $i$
+          , v_table
+          , v_list_of_fields_to_insert_excl_effective
+          , v_list_of_fields_to_insert_excl_effective
+          , p_effective
+          , p_asserted
+          , v_table
+          , v_serial_key
+          ,array_to_string(v_keys_old,',')
+);
+
+
+---insert new assertion rage with old values and new effective range
+ 
+EXECUTE format($i$ WITH inst AS (INSERT INTO %s ( %s, effective, asserted )
+                  SELECT %s ,%L, %L
+                   FROM %s WHERE ( %s )in ( %s )  returning %s )
+                                    SELECT array_agg(%s) FROM inst
+                                      $i$
+          , v_table
+          , v_list_of_fields_to_insert_excl_effective
+          , v_list_of_fields_to_insert_excl_effective
+          , p_effective
+          , p_asserted
+          , v_table
+          , v_serial_key
+          , array_to_string(v_keys_old,',')
+          , v_serial_key
+          , v_serial_key
+) 
+into v_keys;
+--update new record(s) in new assertion rage with new values  
+                           
+                                  
+EXECUTE format($u$ UPDATE %s t SET (%s) = (%s)
+                    WHERE ( %s ) in ( %s ) $u$  
+          , v_table
+          , p_list_of_fields
+          , p_values_selected_update
+          , v_serial_key
+          , array_to_string(v_keys,',')); 
+          
+          
+          
+          
+GET DIAGNOSTICS v_rowcount:=ROW_COUNT;  
+RETURN v_rowcount;
+END;    
+$BODY$ LANGUAGE plpgsql;
+\ir ll_bitemporal_delete_select.sql
+CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_delete_select(
+	p_table text,
+	p_search_fields text,
+	p_values_selected_search text,
+	p_asserted temporal_relationships.timeperiod)
+    RETURNS integer
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE 
+AS $BODY$
+
+DECLARE
+v_rowcount INTEGER:=0;
+v_table_attr text[];
+v_now timestamptz:=now();-- so that we can reference this time
+BEGIN 
+EXECUTE format($u$ UPDATE %s t    SET asserted =
+            temporal_relationships.timeperiod(lower(asserted), lower(%L::temporal_relationships.timeperiod))
+                    WHERE ( %s )in( %s ) AND  lower(%L::temporal_relationships.timeperiod)<@asserted   $u$  
+          , p_table
+          , p_asserted
+          , p_search_fields
+          , p_values_selected_search
+          , p_asserted);
+          
+GET DIAGNOSTICS v_rowcount:=ROW_COUNT;  
+RETURN v_rowcount;
+END;    
+
+$BODY$;
+CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_delete_select(
+	p_table text,
+	p_selected_search text,
+	p_asserted temporal_relationships.timeperiod)
+    RETURNS integer
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE 
+AS $BODY$
+
+DECLARE
+v_rowcount INTEGER:=0;
+v_table_attr text[];
+v_now timestamptz:=now();-- so that we can reference this time
+BEGIN 
+EXECUTE format($u$ UPDATE %s t    SET asserted =
+            temporal_relationships.timeperiod(lower(asserted), lower(%L::temporal_relationships.timeperiod))
+                    WHERE ( %s ) AND  lower(%L::temporal_relationships.timeperiod)<@asserted   $u$  
+          , p_table
+          , p_asserted
+          , p_selected_search
+          , p_asserted);
+          
+GET DIAGNOSTICS v_rowcount:=ROW_COUNT;  
+RETURN v_rowcount;
+END;    
+
+$BODY$;
+\ir ll_create_bitemporal_table_partitioned.sql
+CREATE OR REPLACE FUNCTION bitemporal_internal.ll_create_bitemporal_table_partitioned(
+	p_schema text,
+	p_table text,
+	p_table_definition text,
+	p_business_key text)
+    RETURNS boolean
+    LANGUAGE 'plpgsql'
+ AS $BODY$
+DECLARE
+v_business_key_name text;
+v_business_key_gist text;
+v_serial_key_name text;
+v_serial_key text;
+v_pk_constraint_name text;
+v_table_definition text;
+v_error text;
+v_business_key_array text[];
+i int;
+v_partition_clause text;
+v_sql text;
+BEGIN
+v_serial_key :=p_table||'_key';
+v_serial_key_name :=v_serial_key ||' serial';
+v_pk_constraint_name:= p_table||'_pk';
+v_table_definition :=replace (p_table_definition, ' serial', ' integer');
+v_business_key_array :=string_to_array(p_business_key, ',');
+v_partition_clause := ' partition by range('||p_business_key||')';
+--EXECUTE
+v_sql :=format($create$
+CREATE TABLE %s.%s (
+                 %s
+                 ,%s
+                 ,effective temporal_relationships.timeperiod NOT NULL
+                 ,asserted temporal_relationships.timeperiod  NOT NULL
+                 ,row_created_at timestamptz NOT NULL DEFAULT now()
+                 ,CONSTRAINT %s PRIMARY KEY (%s,%s)
+                     ) %s
+                 $create$
+                 ,p_schema
+                 ,p_table
+                 ,v_serial_key_name
+                 ,v_table_definition
+                  ,v_pk_constraint_name
+                  ,v_serial_key
+			      ,p_business_key
+                 , v_partition_clause
+                 ) ;
+  raise notice '%', v_sql;
+  execute V_sql;
+ i:=1;
+ while v_business_key_array[i] is not null loop
+ execute   format($alter$
+    ALTER TABLE %s.%s ALTER %s SET NOT NULL
+                 $alter$
+                 ,p_schema
+                 ,p_table
+                 ,v_business_key_array[i]
+                 ) ;
+     i:=i+1;
+     end loop;
+ RETURN ('true');
+ EXCEPTION WHEN OTHERS THEN
+GET STACKED DIAGNOSTICS v_error = MESSAGE_TEXT;
+raise notice '%', v_error;
+RETURN ('false');
+END;
+$BODY$;
+\ir ll_create_bitemporal_partition.sql
+CREATE OR REPLACE FUNCTION bitemporal_internal.ll_create_bitemporal_partition(
+	p_schema text,
+	p_table text,
+	p_partition_name text,
+	p_range text)
+    RETURNS boolean
+    LANGUAGE 'plpgsql'
+ AS $BODY$
+DECLARE
+v_business_key text;
+v_business_key_name text;
+v_business_key_gist text;
+v_error text;
+v_business_key_array text[];
+v_sql text;
+BEGIN
+v_business_key :=
+      (select array_to_string(array_agg(a.attname), ',')
+              from
+              (select * from pg_attribute
+	                where attrelid::regclass= (p_schema||'.'||p_table)::regclass) a
+	            join
+              (select
+                unnest(partattrs) as attnum from pg_partitioned_table
+                where partrelid::regclass= (p_schema||'.'||p_table)::regclass) p
+             on a.attnum=p.attnum
+         );
+v_business_key_name :=substr(p_table||'_'||translate(
+translate(v_business_key, '
+',''), ', ','_'),1,47)||'_assert_eff_excl';
+v_business_key_gist :=replace(v_business_key, ',',' WITH =,')||' WITH =, asserted WITH &&, effective WITH &&';
+--raise notice 'gist %',v_business_key_gist;
+--EXECUTE
+v_sql :=format($create$
+CREATE TABLE %s.%s PARTITION OF
+                 %s.%s FOR VALUES %s;
+ALTER TABLE %s.%s ADD CONSTRAINT
+             %s EXCLUDE
+                   USING gist (%s)
+                 $create$
+                 ,p_schema
+                 ,p_partition_name
+                 ,p_schema
+                 ,p_table
+                 ,p_range
+				 ,p_schema
+				 , p_partition_name
+                 ,v_business_key_name
+                 ,v_business_key_gist
+                 ) ;
+  raise notice '%', v_sql;
+  execute v_sql;
+ RETURN ('true');
+ EXCEPTION WHEN OTHERS THEN
+GET STACKED DIAGNOSTICS v_error = MESSAGE_TEXT;
+raise notice '%', v_error;
+RETURN ('false');
+END;
+$BODY$;
+commit;

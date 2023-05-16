@@ -1,0 +1,51 @@
+DROP EXTENSION bitemp_retrieval;
+ERROR:  extension "bitemp_retrieval" does not exist
+CREATE EXTENSION bitemp_retrieval;
+-- Contains
+SELECT bitemp_contains_timeslice(
+    temporal_relationships.timeperiod('2010-10-10'::timestamptz, '2020-10-20'::timestamptz),
+    temporal_relationships.timeperiod('2020-10-10'::timestamptz, '2020-10-20'::timestamptz),
+    '2020-10-15'::timestamptz,
+    '2020-10-15'::timestamptz
+);
+ bitemp_contains_timeslice 
+---------------------------
+ t
+(1 row)
+
+-- Outside effective range
+SELECT bitemp_contains_timeslice(
+    temporal_relationships.timeperiod('2010-10-10'::timestamptz, '2020-10-20'::timestamptz),
+    temporal_relationships.timeperiod('2020-10-10'::timestamptz, '2020-10-20'::timestamptz),
+    '2020-10-25'::timestamptz,
+    '2020-10-15'::timestamptz
+);
+ bitemp_contains_timeslice 
+---------------------------
+ f
+(1 row)
+
+-- Outside asserted range
+SELECT bitemp_contains_timeslice(
+    temporal_relationships.timeperiod('2010-10-10'::timestamptz, '2020-10-20'::timestamptz),
+    temporal_relationships.timeperiod('2020-10-10'::timestamptz, '2020-10-20'::timestamptz),
+    '2020-10-15'::timestamptz,
+    '2020-10-25'::timestamptz
+);
+ bitemp_contains_timeslice 
+---------------------------
+ f
+(1 row)
+
+-- Outside effective & asserted
+SELECT bitemp_contains_timeslice(
+    temporal_relationships.timeperiod('2010-10-10'::timestamptz, '2020-10-20'::timestamptz),
+    temporal_relationships.timeperiod('2020-10-10'::timestamptz, '2020-10-20'::timestamptz),
+    '2021-10-25'::timestamptz,
+    '2021-10-25'::timestamptz
+);
+ bitemp_contains_timeslice 
+---------------------------
+ f
+(1 row)
+
