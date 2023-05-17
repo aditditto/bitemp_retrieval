@@ -1,0 +1,121 @@
+DROP EXTENSION bitemp_retrieval;
+CREATE EXTENSION bitemp_retrieval;
+SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
+    'public',
+    'employee',
+	$$emp_id int, 
+	  emp_name text not null,
+    dept text not null
+	$$,
+   'emp_id');
+ ll_create_bitemporal_table 
+----------------------------
+ t
+(1 row)
+
+SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
+    'public',
+    'manages',
+	$$mgr_id int, 
+	  mgr_name text not null,
+    dept text not null
+	$$,
+   'mgr_id');
+ ll_create_bitemporal_table 
+----------------------------
+ t
+(1 row)
+
+SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+    'public.employee',
+    $$emp_id, emp_name, dept$$,
+    $$1, 'Ron', 'Ship'$$,
+    temporal_relationships.timeperiod('2010-10-01'::timestamptz, '2010-10-06'::timestamptz), --effective
+    temporal_relationships.timeperiod(now(), 'infinity') --asserted
+);
+ ll_bitemporal_insert 
+----------------------
+                    1
+(1 row)
+
+SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+    'public.employee',
+    $$emp_id, emp_name, dept$$,
+    $$2, 'George', 'Ship'$$,
+    temporal_relationships.timeperiod('2010-10-05'::timestamptz, '2010-10-09'::timestamptz), --effective
+    temporal_relationships.timeperiod(now(), 'infinity') --asserted
+);
+ ll_bitemporal_insert 
+----------------------
+                    1
+(1 row)
+
+SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+    'public.employee',
+    $$emp_id, emp_name, dept$$,
+    $$1, 'Ron', 'Mail'$$,
+    temporal_relationships.timeperiod('2010-10-06'::timestamptz, '2010-10-11'::timestamptz), --effective
+    temporal_relationships.timeperiod(now(), 'infinity') --asserted
+);
+ ll_bitemporal_insert 
+----------------------
+                    1
+(1 row)
+
+SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+    'public.manages',
+    $$mgr_id, mgr_name, dept$$,
+    $$1, 'Ed', 'Load'$$,
+    temporal_relationships.timeperiod('2010-10-03'::timestamptz, '2010-10-09'::timestamptz), --effective
+    temporal_relationships.timeperiod(now(), 'infinity') --asserted
+);
+ ll_bitemporal_insert 
+----------------------
+                    1
+(1 row)
+
+SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+    'public.manages',
+    $$mgr_id, mgr_name, dept$$,
+    $$2, 'Jim', 'Ship'$$,
+    temporal_relationships.timeperiod('2010-10-07'::timestamptz, '2010-10-16'::timestamptz), --effective
+    temporal_relationships.timeperiod(now(), 'infinity') --asserted
+);
+ ll_bitemporal_insert 
+----------------------
+                    1
+(1 row)
+
+SELECT * FROM employee;
+ employee_key | emp_id | emp_name | dept |                            effective                            |                     asserted                     |           row_created_at            
+--------------+--------+----------+------+-----------------------------------------------------------------+--------------------------------------------------+-------------------------------------
+            1 |      1 | Ron      | Ship | ["Fri Oct 01 00:00:00 2010 PDT","Wed Oct 06 00:00:00 2010 PDT") | ["Tue May 16 04:41:57.068648 2023 PDT",infinity) | Tue May 16 04:41:57.068648 2023 PDT
+            2 |      2 | George   | Ship | ["Tue Oct 05 00:00:00 2010 PDT","Sat Oct 09 00:00:00 2010 PDT") | ["Tue May 16 04:41:57.070645 2023 PDT",infinity) | Tue May 16 04:41:57.070645 2023 PDT
+            3 |      1 | Ron      | Mail | ["Wed Oct 06 00:00:00 2010 PDT","Mon Oct 11 00:00:00 2010 PDT") | ["Tue May 16 04:41:57.07233 2023 PDT",infinity)  | Tue May 16 04:41:57.07233 2023 PDT
+(3 rows)
+
+SELECT * FROM manages;
+ manages_key | mgr_id | mgr_name | dept |                            effective                            |                     asserted                     |           row_created_at            
+-------------+--------+----------+------+-----------------------------------------------------------------+--------------------------------------------------+-------------------------------------
+           1 |      1 | Ed       | Load | ["Sun Oct 03 00:00:00 2010 PDT","Sat Oct 09 00:00:00 2010 PDT") | ["Tue May 16 04:41:57.073878 2023 PDT",infinity) | Tue May 16 04:41:57.073878 2023 PDT
+           2 |      2 | Jim      | Ship | ["Thu Oct 07 00:00:00 2010 PDT","Sat Oct 16 00:00:00 2010 PDT") | ["Tue May 16 04:41:57.075585 2023 PDT",infinity) | Tue May 16 04:41:57.075585 2023 PDT
+(2 rows)
+
+SELECT emp_name, e.dept, m.dept, mgr_name, bitemp_timeperiod_join(e.effective, m.effective) FROM
+employee e join manages m ON bitemp_timeperiod_joinable(e.effective, m.effective);
+ emp_name | dept | dept | mgr_name |                     bitemp_timeperiod_join                      
+----------+------+------+----------+-----------------------------------------------------------------
+ Ron      | Ship | Load | Ed       | ["Sun Oct 03 00:00:00 2010 PDT","Wed Oct 06 00:00:00 2010 PDT")
+ George   | Ship | Load | Ed       | ["Tue Oct 05 00:00:00 2010 PDT","Sat Oct 09 00:00:00 2010 PDT")
+ George   | Ship | Ship | Jim      | ["Thu Oct 07 00:00:00 2010 PDT","Sat Oct 09 00:00:00 2010 PDT")
+ Ron      | Mail | Load | Ed       | ["Wed Oct 06 00:00:00 2010 PDT","Sat Oct 09 00:00:00 2010 PDT")
+ Ron      | Mail | Ship | Jim      | ["Thu Oct 07 00:00:00 2010 PDT","Mon Oct 11 00:00:00 2010 PDT")
+(5 rows)
+
+SELECT emp_name, e.dept, m.dept, mgr_name, bitemp_timeperiod_join(e.effective, m.effective) FROM
+employee e join manages m ON bitemp_timeperiod_joinable(e.effective, m.effective) AND e.dept = m.dept;
+ emp_name | dept | dept | mgr_name |                     bitemp_timeperiod_join                      
+----------+------+------+----------+-----------------------------------------------------------------
+ George   | Ship | Ship | Jim      | ["Thu Oct 07 00:00:00 2010 PDT","Sat Oct 09 00:00:00 2010 PDT")
+(1 row)
+
