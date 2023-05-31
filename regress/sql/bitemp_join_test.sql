@@ -59,11 +59,14 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     temporal_relationships.timeperiod(now(), 'infinity') --asserted
 );
 
-SELECT * FROM employee;
-SELECT * FROM manages;
+SELECT emp_id, emp_name, dept, effective FROM employee;
+SELECT mgr_id, mgr_name, dept, effective FROM manages;
 
 SELECT emp_name, e.dept, m.dept, mgr_name, bitemp_timeperiod_join(e.effective, m.effective) FROM
 employee e join manages m ON bitemp_timeperiod_joinable(e.effective, m.effective);
 
 SELECT emp_name, e.dept, m.dept, mgr_name, bitemp_timeperiod_join(e.effective, m.effective) FROM
 employee e join manages m ON bitemp_timeperiod_joinable(e.effective, m.effective) AND e.dept = m.dept;
+
+DROP TABLE employee;
+DROP TABLE manages;

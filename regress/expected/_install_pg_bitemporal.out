@@ -1599,3 +1599,4 @@ RETURN ('false');
 END;
 $BODY$;
 commit;
+CREATE EXTENSION plperl;

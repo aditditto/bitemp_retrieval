@@ -10,7 +10,8 @@ OBJS = 	src/bitemp_retrieval.o \
 REGRESS = _install_pg_bitemporal \
 		  bitemp_contains_timeslice_test \
 		  bitemp_join_functions_test \
-		  bitemp_join_test
+		  bitemp_join_test \
+		  unitemp_coalesce_test
 
 srcdir = $(pwd)
 

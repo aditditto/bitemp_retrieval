@@ -11,3 +11,4 @@ build.sh
 *.out
 *.out.diff
 *.diffs
+.vscode

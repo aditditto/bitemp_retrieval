@@ -86,19 +86,19 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
                     1
 (1 row)
 
-SELECT * FROM employee;
- employee_key | emp_id | emp_name | dept |                            effective                            |                     asserted                     |           row_created_at            
---------------+--------+----------+------+-----------------------------------------------------------------+--------------------------------------------------+-------------------------------------
-            1 |      1 | Ron      | Ship | ["Fri Oct 01 00:00:00 2010 PDT","Wed Oct 06 00:00:00 2010 PDT") | ["Tue May 16 04:41:57.068648 2023 PDT",infinity) | Tue May 16 04:41:57.068648 2023 PDT
-            2 |      2 | George   | Ship | ["Tue Oct 05 00:00:00 2010 PDT","Sat Oct 09 00:00:00 2010 PDT") | ["Tue May 16 04:41:57.070645 2023 PDT",infinity) | Tue May 16 04:41:57.070645 2023 PDT
-            3 |      1 | Ron      | Mail | ["Wed Oct 06 00:00:00 2010 PDT","Mon Oct 11 00:00:00 2010 PDT") | ["Tue May 16 04:41:57.07233 2023 PDT",infinity)  | Tue May 16 04:41:57.07233 2023 PDT
+SELECT emp_id, emp_name, dept, effective FROM employee;
+ emp_id | emp_name | dept |                            effective                            
+--------+----------+------+-----------------------------------------------------------------
+      1 | Ron      | Ship | ["Fri Oct 01 00:00:00 2010 PDT","Wed Oct 06 00:00:00 2010 PDT")
+      2 | George   | Ship | ["Tue Oct 05 00:00:00 2010 PDT","Sat Oct 09 00:00:00 2010 PDT")
+      1 | Ron      | Mail | ["Wed Oct 06 00:00:00 2010 PDT","Mon Oct 11 00:00:00 2010 PDT")
 (3 rows)
 
-SELECT * FROM manages;
- manages_key | mgr_id | mgr_name | dept |                            effective                            |                     asserted                     |           row_created_at            
--------------+--------+----------+------+-----------------------------------------------------------------+--------------------------------------------------+-------------------------------------
-           1 |      1 | Ed       | Load | ["Sun Oct 03 00:00:00 2010 PDT","Sat Oct 09 00:00:00 2010 PDT") | ["Tue May 16 04:41:57.073878 2023 PDT",infinity) | Tue May 16 04:41:57.073878 2023 PDT
-           2 |      2 | Jim      | Ship | ["Thu Oct 07 00:00:00 2010 PDT","Sat Oct 16 00:00:00 2010 PDT") | ["Tue May 16 04:41:57.075585 2023 PDT",infinity) | Tue May 16 04:41:57.075585 2023 PDT
+SELECT mgr_id, mgr_name, dept, effective FROM manages;
+ mgr_id | mgr_name | dept |                            effective                            
+--------+----------+------+-----------------------------------------------------------------
+      1 | Ed       | Load | ["Sun Oct 03 00:00:00 2010 PDT","Sat Oct 09 00:00:00 2010 PDT")
+      2 | Jim      | Ship | ["Thu Oct 07 00:00:00 2010 PDT","Sat Oct 16 00:00:00 2010 PDT")
 (2 rows)
 
 SELECT emp_name, e.dept, m.dept, mgr_name, bitemp_timeperiod_join(e.effective, m.effective) FROM
@@ -119,3 +119,5 @@ employee e join manages m ON bitemp_timeperiod_joinable(e.effective, m.effective
  George   | Ship | Ship | Jim      | ["Thu Oct 07 00:00:00 2010 PDT","Sat Oct 09 00:00:00 2010 PDT")
 (1 row)
 
+DROP TABLE employee;
+DROP TABLE manages;
