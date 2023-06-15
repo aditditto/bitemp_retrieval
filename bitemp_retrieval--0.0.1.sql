@@ -126,9 +126,42 @@ LANGUAGE plv8;
 
 
 
-CREATE FUNCTION tmda_ci(p_query TEXT) RETURNS void AS 
+CREATE FUNCTION tmda_ci(
+  p_schema TEXT,
+  p_table TEXT,
+  p_group_by TEXT[],
+  p_aggr_funcs TEXT[],
+  p_aggr_target TEXT[],
+  p_aggr_fieldnames TEXT[]) 
+RETURNS void AS 
 $$
-    eval(plv8.execute("select source from bitemp_retrieval_utils where module = 'AVLTree'")[0].source);
+    eval(plv8.execute("select source from bitemporal_internal.bitemp_retrieval_utils where module = 'AVLTree'")[0].source);
+
+    var v_group_by = plv8.execute(`SELECT column_name, data_type FROM information_schema.columns WHERE 
+    table_schema=$1 AND table_name=$2 AND column_name IN (${p_group_by.map(x => `'${x}'`).join(', ')})`,
+    [p_schema, p_table]);
+    v_group_by.forEach(col => {
+      col.column_name = `"${col.column_name}"`
+    });
+    var v_group_by_cols = v_group_by.map(col => col.column_name);
+
+    plv8.execute(`CREATE TEMP TABLE bitemporal_internal.tmda_ci_aggr_group(
+      id SERIAL PRIMARY KEY,
+      ${v_group_by.map(col => `${col.column_name} ${col.data_type}`).join(",\n")},
+      effective temporal_relationships.timeperiod DEFAULT '["-infinity", "infinity")'
+      )`);
+    plv8.execute(`CREATE INDEX lookup_tmda ON tmda_ci_aggr_group (${v_group_by_cols.join(', ')})`);
+    
+    plv8.execute(`INSERT INTO tmda_ci_aggr_group(${v_group_by_cols.join(', ')}, effective)
+    (
+      SELECT DISTINCT
+        ${v_group_by_cols.map(col => `"${p_schema}"."${p_table}"."${col}"`).join(",\n")}
+      FROM ${`"${p_schema}"."${p_table}"`}
+    )`);
+
+    plv8.execute('ANALYZE tmda_ci_aggr_group');
+
+    plv8.execute('DROP TABLE tmda_ci_aggr_group');
 $$
 LANGUAGE plv8;
 
