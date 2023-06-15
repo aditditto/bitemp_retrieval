@@ -6,6 +6,6 @@ Postgresql extension for retrieval functionality on bitemporal tables created us
 
 Checklist:
 - [x] Timeslice
-- [ ] Temporal coalescing
-- [ ] Temporal join
+- [x] Temporal coalescing
+- [x] Temporal join
 - [ ] Temporal aggregation
