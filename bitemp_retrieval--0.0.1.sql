@@ -118,13 +118,26 @@ LANGUAGE plperl;
 
 CREATE FUNCTION v8_select_test(p_query TEXT) RETURNS void AS 
 $$
-    var avl = plv8.execute("select source from bitemp_retrieval_utils where module = 'AVLTree'");
+    var avl = plv8.execute("select source from bitemporal_internal.bitemp_retrieval_utils where module = 'AVLTree'");
     eval(avl[0].source);
-    plv8.elog(INFO, `fdsafasf${"???"}`)
+    var minfinity = plv8.execute(`select lower('["-infinity", "infinity"]'::tstzrange), upper('["-infinity", "infinity"]'::tstzrange);`);
+    plv8.elog(INFO, minfinity[0].lower.getTime());
+    plv8.elog(INFO, minfinity[0].upper.getTime());
+    plv8.elog(INFO, minfinity[0].lower > Date.now());
+    plv8.elog(INFO, minfinity[0].lower < Date.now());
 $$
 LANGUAGE plv8;
 
-
+CREATE FUNCTION v8_infinity_test() RETURNS tstzrange AS 
+$$
+    var minfinity = plv8.execute(`select lower('["-infinity", "infinity"]'::tstzrange), upper('["-infinity", "infinity"]'::tstzrange);`);
+    plv8.elog(INFO, minfinity[0].lower.getTime());
+    plv8.elog(INFO, minfinity[0].upper.getTime());
+    plv8.elog(INFO, minfinity[0].lower > Date.now());
+    plv8.elog(INFO, minfinity[0].lower < Date.now());
+    return `["${new Date().toISOString()}", "infinity"]`;
+$$
+LANGUAGE plv8;
 
 CREATE FUNCTION tmda_ci(
   p_schema TEXT,
@@ -175,8 +188,10 @@ CREATE TABLE bitemporal_internal.temporal_attribute_properties(
     table_name TEXT,
     attr_name TEXT,
     attr_property bitemporal_internal.temporal_attribute_property_enum,
-    PRIMARY KEY (schema_name, table_name, attr_name)
+    PRIMARY KEY (schema_name, table_name, attr_name, attr_property)
 );
+
+CREATE INDEX lookup_attr_props ON bitemporal_internal.temporal_attribute_properties (schema_name, table_name, attr_name);
 
 CREATE FUNCTION bitemporal_internal.ll_register_temporal_attribute_property(
     p_schema TEXT,

@@ -86,8 +86,10 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
 SELECT n, cid, d, p, h, s, effective FROM empl WHERE now() <@ asserted;
 
 PREPARE get_types(text, text) AS 
-SELECT column_name, data_type FROM information_schema.columns WHERE 
-  table_schema=$1 AND table_name=$2 AND column_name IN ('d');
+SELECT c.column_name, c.data_type, attr_property FROM 
+    information_schema.columns c LEFT JOIN bitemporal_internal.temporal_attribute_properties p
+    ON c.table_schema=p.schema_name AND c.table_name=p.table_name AND c.column_name=p.attr_name WHERE 
+    c.table_schema=$1 AND c.table_name=$2 AND c.column_name IN ('h', 's');
 
 EXECUTE get_types('public', 'empl');
 
@@ -107,3 +109,14 @@ WITH rows AS (
   ) SELECT count(*) AS rownum FROM rows;
 
 SELECT * FROM tmda_ci_aggr_group;
+
+SELECT 
+  "d",
+  "h", "s",
+  LOWER(effective) AS effective_start, UPPER(effective) AS effective_end
+  FROM "public"."empl"
+  ORDER BY LOWER(effective);
+
+SELECT * FROM v8_select_test('fdsfa');
+
+SELECT v8_infinity_test()::tstzrange AS ts;
