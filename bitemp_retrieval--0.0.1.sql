@@ -135,6 +135,11 @@ $$
     plv8.elog(INFO, minfinity[0].upper.getTime());
     plv8.elog(INFO, minfinity[0].lower > Date.now());
     plv8.elog(INFO, minfinity[0].lower < Date.now());
+
+    var test_select_props = plv8.execute(`SELECT * FROM bitemporal_internal.temporal_attribute_properties`);
+    plv8.elog(INFO, test_select_props[0].attr_property == 'malleable');
+    plv8.elog(INFO, test_select_props[0].attr_property === 'malleable');
+
     return `["${new Date().toISOString()}", "infinity"]`;
 $$
 LANGUAGE plv8;
