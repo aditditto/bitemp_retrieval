@@ -19,6 +19,7 @@ SELECT * FROM bitemporal_internal.ll_register_temporal_attribute_property('publi
 
 SELECT * FROM bitemporal_internal.temporal_attribute_properties;
 
+-- r1
 SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     'public.empl',
     $$n, cid, d, p, h, s$$,
@@ -27,14 +28,16 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     temporal_relationships.timeperiod(now(), 'infinity') --asserted
 );
 
-SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
-    'public.empl',
-    $$n, cid, d, p, h, s$$,
-    $$'Jan', 163, 'DB', 'P1', 600, 1500$$,
-    temporal_relationships.timeperiod('2004-07-01'::timestamptz, '2004-10-01'::timestamptz), --effective
-    temporal_relationships.timeperiod(now(), 'infinity') --asserted
-);
+-- -- r2
+-- SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+--     'public.empl',
+--     $$n, cid, d, p, h, s$$,
+--     $$'Jan', 163, 'DB', 'P1', 600, 1500$$,
+--     temporal_relationships.timeperiod('2004-07-01'::timestamptz, '2004-10-01'::timestamptz), --effective
+--     temporal_relationships.timeperiod(now(), 'infinity') --asserted
+-- );
 
+-- r3
 SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     'public.empl',
     $$n, cid, d, p, h, s$$,
@@ -43,6 +46,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     temporal_relationships.timeperiod(now(), 'infinity') --asserted
 );
 
+-- r4
 SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     'public.empl',
     $$n, cid, d, p, h, s$$,
@@ -51,6 +55,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     temporal_relationships.timeperiod(now(), 'infinity') --asserted
 );
 
+-- r5
 SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     'public.empl',
     $$n, cid, d, p, h, s$$,
@@ -59,6 +64,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     temporal_relationships.timeperiod(now(), 'infinity') --asserted
 );
 
+-- r6
 SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     'public.empl',
     $$n, cid, d, p, h, s$$,
@@ -67,6 +73,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     temporal_relationships.timeperiod(now(), 'infinity') --asserted
 );
 
+-- r7
 SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     'public.empl',
     $$n, cid, d, p, h, s$$,
@@ -75,6 +82,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     temporal_relationships.timeperiod(now(), 'infinity') --asserted
 );
 
+-- r8
 SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     'public.empl',
     $$n, cid, d, p, h, s$$,
@@ -85,38 +93,16 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
 
 SELECT n, cid, d, p, h, s, effective FROM empl WHERE now() <@ asserted;
 
-PREPARE get_types(text, text) AS 
-SELECT c.column_name, c.data_type, attr_property FROM 
-    information_schema.columns c LEFT JOIN bitemporal_internal.temporal_attribute_properties p
-    ON c.table_schema=p.schema_name AND c.table_name=p.table_name AND c.column_name=p.attr_name WHERE 
-    c.table_schema=$1 AND c.table_name=$2 AND c.column_name IN ('h', 's');
-
-EXECUTE get_types('public', 'empl');
-
-CREATE TEMP TABLE tmda_ci_aggr_group(
-    id SERIAL PRIMARY KEY,
-    "d" text,
-    effective temporal_relationships.timeperiod DEFAULT '["-infinity", "infinity")'
-    );
-CREATE INDEX lookup_tmda ON tmda_ci_aggr_group ("d");
-WITH rows AS (
-    INSERT INTO tmda_ci_aggr_group("d")
-  (
-    SELECT DISTINCT
-      "public"."empl"."d"
-    FROM "public"."empl"
-  ) RETURNING 1
-  ) SELECT count(*) AS rownum FROM rows;
-
-SELECT * FROM tmda_ci_aggr_group;
-
-SELECT 
-  "d",
-  "h", "s",
-  LOWER(effective) AS effective_start, UPPER(effective) AS effective_end
-  FROM "public"."empl"
-  ORDER BY LOWER(effective);
-
-SELECT * FROM v8_select_test('fdsfa');
-
-SELECT v8_infinity_test()::tstzrange AS ts;
+SELECT * FROM tmda_ci(
+    'public',
+    'empl',
+    ARRAY['d'],
+    ARRAY['sum', 'max'],
+    ARRAY['h', 's'],
+    ARRAY['sum_h', 'max_s']
+) AS (
+    d text,
+    sum_h numeric,
+    max_s numeric,
+    effective tstzrange
+);
