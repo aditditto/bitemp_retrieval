@@ -205,14 +205,22 @@ $$
     plv8.execute(create_temp_table_q);
     plv8.execute(`CREATE INDEX lookup_tmda ON tmda_ci_aggr_group (${v_group_by_cols.join(', ')})`);
     
-    let group_table_count = plv8.execute(`WITH rows AS (
+    const gt_insert_q = `WITH rows AS (
       INSERT INTO tmda_ci_aggr_group(${v_group_by_cols.join(', ')})
     (
       SELECT DISTINCT
         ${v_group_by_cols.map(col => `"${p_schema}"."${p_table}".${col}`).join(",\n")}
       FROM ${`"${p_schema}"."${p_table}"`}
     ) RETURNING 1
-    ) SELECT count(*) AS rownum FROM rows`)[0].rownum;
+    ) SELECT count(*) AS rownum FROM rows`;
+    let group_table_count = plv8.execute(gt_insert_q)[0].rownum;
+    plv8.elog(log_level, `gt_insert_q: ${gt_insert_q} gt_rowcount: ${group_table_count}`);
+
+    const debug_gt = plv8.execute(`SELECT * FROM tmda_ci_aggr_group`);
+    for (let i = 0; i < debug_gt.length; i++) {
+      const g = debug_gt[i];
+      plv8.elog(log_level, `g[${i}]: ${JSON.stringify(g)}`);
+    }
 
     plv8.execute('ANALYZE tmda_ci_aggr_group');
 
@@ -378,6 +386,7 @@ $$
       // foreach gt[i] ∈ gt do
       for (let i = 0; i < rows.length; i++) {
         const g = rows[i];
+        plv8.elog(log_level, `g[${i}]: ${JSON.stringify(g)}`);
         const tree = avltrees[g.id-1];
         //   foreach v ∈ gt[i].T in chronological order do
         //   Create result tuple, add it to z, and close past nodes in gt[i].T ;
@@ -470,7 +479,7 @@ $$
         });
       }
 
-      rows = cursor.fetch(5);
+      rows = gt_cursor.fetch(5);
     }
 
     gt_cursor.close();
