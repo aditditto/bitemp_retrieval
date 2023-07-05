@@ -17,7 +17,7 @@ function tmda_ci_c(p_schema, p_table, p_group_by, p_aggr_funcs, p_aggr_target, p
           dif + pad(Math.floor(Math.abs(tzo) / 60)) +
           ':' + pad(Math.abs(tzo) % 60);
     }
-    const log_level = INFO;
+    const log_level = DEBUG1;
     const vars = [p_schema, p_table, p_group_by, p_aggr_funcs, p_aggr_target, p_aggr_fieldnames];
     vars.forEach(el => plv8.elog(log_level, `function param: ${el}`));
     // PREP: Initialize gt and index
@@ -112,7 +112,7 @@ function tmda_ci_c(p_schema, p_table, p_group_by, p_aggr_funcs, p_aggr_target, p
                 let aggrResults = new Array(p_aggr_funcs.length).fill(0); // ResultTuple helpers
                 let count = 0;
                 tree.forEach(function(resultmember) { // ResultTuple(gt[i], F, C)
-                  let nodeRows = resultmember.data;
+                  const nodeRows = resultmember.data;
                   for (let noderowCount = 0; noderowCount < nodeRows.length; noderowCount++) {
                     const noderow = nodeRows[noderowCount];
                     count++;
@@ -217,9 +217,111 @@ function tmda_ci_c(p_schema, p_table, p_group_by, p_aggr_funcs, p_aggr_target, p
       rows = cursor.fetch(5);
     }
 
-    // foreach gt[i] ∈ gt do
-    //   foreach v ∈ gt[i].T in chronological order do
-    //   Create result tuple, add it to z, and close past nodes in gt[i].T ;
+    plv8.elog(log_level, "ROWS ITERATION DONE");
+    const gt_plan = plv8.prepare(`SELECT *, LOWER(effective) AS tstart, UPPER(effective) AS tend FROM tmda_ci_aggr_group`);
+    const gt_cursor = gt_plan.cursor();
+    
+    rows = gt_cursor.fetch(5);
+    while (rows) {
+      // foreach gt[i] ∈ gt do
+      for (let i = 0; i < rows.length; i++) {
+        const g = rows[i];
+        const tree = avltrees[g.id-1];
+        //   foreach v ∈ gt[i].T in chronological order do
+        //   Create result tuple, add it to z, and close past nodes in gt[i].T ;
+        tree.forEach(function(node) { // foreach v ∈ gt[i].T in chronological order
+          g.tend = node.key; // gt[i].Te ← v.t;
+
+          let aggrResults = new Array(p_aggr_funcs.length).fill(0); // ResultTuple helpers
+          let count = 0;
+          tree.forEach(function(resultmember) { // ResultTuple(gt[i], F, C)
+            const nodeRows = resultmember.data;
+
+            for (let noderowCount = 0; noderowCount < nodeRows.length; noderowCount++) {
+              const noderow = nodeRows[noderowCount];
+              count++;
+              
+              for (let k = 0; k < p_aggr_funcs.length; k++) {
+                // we need: aggr_func, rowname, property
+                const aggr_func = p_aggr_funcs[k];
+                let attr_scaling = 1;
+
+                if (v_attr_props.get(p_aggr_target[k]) == 'malleable') {
+                  let rowtend = isNaN(noderow.effective_end.getTime()) ? Date.now() : noderow.effective_end.getTime();
+                  plv8.elog(log_level, `rowtend: ${rowtend}`);
+                  plv8.elog(log_level, `g.tstart.getTime(): ${g.tstart.getTime()}`);
+                  plv8.elog(log_level, `noderow.effective_start.getTime(): ${noderow.effective_start.getTime()}`);
+                  attr_scaling = (g.tend.getTime() - g.tstart.getTime()) / (rowtend - noderow.effective_start.getTime());
+                }
+                plv8.elog(log_level, `p_aggr_target[k]: ${p_aggr_target[k]}`);
+                plv8.elog(log_level, `attr_scaling: ${attr_scaling}`);
+
+                const rowval = noderow[p_aggr_target[k]] * attr_scaling;
+                
+                if (aggr_func == "avg") {
+                  aggrResults[k] += rowval;
+                } else if (aggr_func == "sum") {
+                  aggrResults[k] += rowval;
+                } else if (aggr_func == "max") {
+                  if (count === 1) { // First row
+                    aggrResults[k] = rowval;
+                  } else {
+                    if (rowval > aggrResults[k]) {
+                      aggrResults[k] = rowval;
+                    }
+                  }
+                } else if (aggr_func == "min") {
+                  if (count === 1) {
+                    aggrResults[k] = rowval;
+                  } else {
+                    if (rowval < aggrResults[k]) {
+                      aggrResults[k] = rowval;
+                    }
+                  }
+                } else if (aggr_func == "count") {
+                  aggrResults[k]++;
+                }
+              }
+            }
+          });
+          
+          for (let k = 0; k < p_aggr_funcs.length; k++) {
+            const aggr_func = p_aggr_funcs[k];
+            if (aggr_func == "avg") {
+              aggrResults[k] = aggrResults[k] / count;
+            }
+          }
+
+          if (count > 0) {
+            const result_period = `["${toIsoString(g.tstart)}", "${isNaN(g.tend) ? 'infinity' : toIsoString(g.tend)}")`
+            let to_return = {};
+            for (let k = 0; k < p_aggr_fieldnames.length; k++) {
+              const fieldname = p_aggr_fieldnames[k];
+              to_return[fieldname] = aggrResults[k];
+            }
+
+            for (let k = 0; k < p_group_by.length; k++) {
+              const fieldname = p_group_by[k];
+              to_return[fieldname] = g[fieldname];
+            }
+
+            to_return.effective = result_period;
+            plv8.return_next(to_return);
+          }
+
+          plv8.elog(log_level, `node.key: ${node.key}`);
+          g.tstart = node.key; // gt[i].T ← [v.t + 1, ∗];
+          g.tend = new Date(NaN); 
+          // plv8.elog(log_level, `g.tstart: ${g.tstart}, g.tend: ${g.tend}`);
+
+          node.data = []; // Remove node v from gt[i].T; deleting later to preserve tree traversal order
+        });
+      }
+
+      rows = cursor.fetch(5);
+    }
+
+    gt_cursor.close();
     cursor.close();
     plan.free();
     plv8.execute('DROP TABLE tmda_ci_aggr_group');
