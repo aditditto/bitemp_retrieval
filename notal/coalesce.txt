@@ -1,0 +1,21 @@
+Algoritma temporal_coalescing
+Input: relasi r
+Output: relasi r
+Deklarasi:
+Metode: 
+  # Mengambil tuple dari r diurut berdasarkan atribut nontemporal dan awal interval
+  stmt <- SELECT START(interval) AS E, END(interval) AS E, c FROM r ORDER BY c, START(interval)
+  curr_tup <- fetch(stmt)
+  next_tup <- fetch(stmt)
+
+  while next_tup != null do
+    if curr_tup.c = next_tup.c and next_tup.S <= curr_tup.E then
+      curr_tup.E = next_tup.E
+    else
+      return_next(curr_tup)
+      curr_tup <- next_tup
+    endif;
+
+    next_tup <- fetch(stmt)
+
+  return_next(curr_tup)

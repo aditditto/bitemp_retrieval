@@ -1,0 +1,23 @@
+Algorithm:TMDA-CI(g, r, F, θ, C)
+if g = π[A1, . . . , Am](r) then
+  gt ← empty group table with columns B1, . . . , Bm, T , T ;
+else
+  Initialize gt with (g, empty T ), g ∈ g, and replace timestamp T by [−∞, ∗];
+  Create index for gt on attributes B1, . . . , Bm; z ← ∅;
+foreach tuple r ∈ r in chronological order do
+  if g = π[A1, . . . , Am](r) and r.A1, . . . , r.Am not yet in gt then
+    Insert (r.A1, . . . , r.Am, [−∞, ∗], empty T ) into gt;
+    foreach i ∈ L OOKUP(gt, r, θ) do
+  if r.Ts > gt[i].Ts then
+    Insert a new node with time r.Ts−1 into gt[i].T (if not already there);
+    foreach v ∈ gt[i].T in chronological order, where v.t < r.Ts do
+      gt[i].Te ← v.t;
+      z ← z ∪ ResultTuple(gt[i], F, C);
+      gt[i].T ← [v.t + 1, ∗];
+      Remove node v from gt[i].T ;
+  v ← node in gt[i].T with time v.t = r.Te (insert a new node if required);
+  v.open ← v.open ∪ r[A1, . . . , Ap, Ts];
+foreach gt[i] ∈ gt do
+foreach v ∈ gt[i].T in chronological order do
+Create result tuple, add it to z, and close past nodes in gt[i].T ;
+return z;

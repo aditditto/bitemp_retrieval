@@ -1,0 +1,41 @@
+Algoritma calculateTreeAggregate
+Input: treeNode n, aggregateFunction[] F, attributeProperty[] C, interval gT
+Output: float[] results
+Deklarasi:
+Metode: 
+  leftResults <- calculateTreeAggregate(n.left, F, C, gT)
+  results <- [0 for i in range 0..len(F)]
+
+  nodetuples <- n.data
+  foreach tup in nodetuples do
+    foreach i in range 0..len(F) do
+      attr_scaling <- 1
+      if C[F] = 'malleable' then
+        attr_scaling <- (gT.end - gT.start) / (tup.T.end - tup.T.start)
+      endif
+
+      results[i] <- results[i] + (F(tup) * attr_scaling)
+
+  
+  rightResults <- calculateTreeAggregate(n.right, F, C, gT)
+
+  for i in range 0..len(results) do
+    results[i] <- leftResults[i] + results[i] + rightResults[i]
+
+  return results
+
+
+Algoritma resultTuple
+Input: aggregateGroup gi, aggregateFunction[] F, attributeProperty[] C
+Output: resultTuple zi
+Deklarasi:
+Metode: 
+  tree <- gi.Tree
+
+  # traversal tree secara inorder
+  aggregateResults <- calculateTreeAggregate(tree.root, F, C, gi.T)
+
+  zi.groupAttributes <- gi
+  zi.results <- aggregateResults
+
+  return zi
