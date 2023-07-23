@@ -8,7 +8,7 @@ LANGUAGE C IMMUTABLE STRICT
 SET search_path = 'temporal_relationships';
 
 CREATE OR REPLACE
-FUNCTION bitemp_contains_timeslice(
+FUNCTION bitemp_contains_ts(
     effective_range temporal_relationships.timeperiod,
     asserted_range temporal_relationships.timeperiod,
     effective_ts timestamptz,
@@ -19,6 +19,20 @@ AS
 $BODY$
 BEGIN
   RETURN effective_ts <@ effective_range AND asserted_ts <@ asserted_range;  
+END;
+$BODY$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE
+FUNCTION interval_contains_ts(
+    interv temporal_relationships.timeperiod,
+    ts timestamptz
+    ) 
+RETURNS BOOLEAN
+AS
+$BODY$
+BEGIN
+  RETURN ts <@ interv;  
 END;
 $BODY$
 LANGUAGE plpgsql;

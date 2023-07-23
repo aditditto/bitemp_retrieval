@@ -2,7 +2,7 @@ DROP EXTENSION bitemp_retrieval;
 CREATE EXTENSION bitemp_retrieval;
 
 -- Contains
-SELECT bitemp_contains_timeslice(
+SELECT bitemp_contains_ts(
     temporal_relationships.timeperiod('2010-10-10'::timestamptz, '2020-10-20'::timestamptz),
     temporal_relationships.timeperiod('2020-10-10'::timestamptz, '2020-10-20'::timestamptz),
     '2020-10-15'::timestamptz,
@@ -10,7 +10,7 @@ SELECT bitemp_contains_timeslice(
 );
 
 -- Outside effective range
-SELECT bitemp_contains_timeslice(
+SELECT bitemp_contains_ts(
     temporal_relationships.timeperiod('2010-10-10'::timestamptz, '2020-10-20'::timestamptz),
     temporal_relationships.timeperiod('2020-10-10'::timestamptz, '2020-10-20'::timestamptz),
     '2020-10-25'::timestamptz,
@@ -18,7 +18,7 @@ SELECT bitemp_contains_timeslice(
 );
 
 -- Outside asserted range
-SELECT bitemp_contains_timeslice(
+SELECT bitemp_contains_ts(
     temporal_relationships.timeperiod('2010-10-10'::timestamptz, '2020-10-20'::timestamptz),
     temporal_relationships.timeperiod('2020-10-10'::timestamptz, '2020-10-20'::timestamptz),
     '2020-10-15'::timestamptz,
@@ -26,9 +26,26 @@ SELECT bitemp_contains_timeslice(
 );
 
 -- Outside effective & asserted
-SELECT bitemp_contains_timeslice(
+SELECT bitemp_contains_ts(
     temporal_relationships.timeperiod('2010-10-10'::timestamptz, '2020-10-20'::timestamptz),
     temporal_relationships.timeperiod('2020-10-10'::timestamptz, '2020-10-20'::timestamptz),
     '2021-10-25'::timestamptz,
     '2021-10-25'::timestamptz
+);
+
+SELECT interval_contains_ts(
+    temporal_relationships.timeperiod('2020-10-10'::timestamptz, '2020-10-20'::timestamptz),
+    '2020-10-15'::timestamptz
+);
+
+-- Outside range
+SELECT interval_contains_ts(
+    temporal_relationships.timeperiod('2020-10-10'::timestamptz, '2020-10-20'::timestamptz),
+    '2020-10-25'::timestamptz
+);
+
+-- Outside range
+SELECT interval_contains_ts(
+    temporal_relationships.timeperiod('2020-10-10'::timestamptz, '2020-10-20'::timestamptz),
+    '2020-10-20'::timestamptz
 );
