@@ -62,11 +62,11 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
 SELECT emp_id, emp_name, dept, effective FROM employee;
 SELECT mgr_id, mgr_name, dept, effective FROM manages;
 
-SELECT emp_name, e.dept, m.dept, mgr_name, bitemp_join(e.effective, m.effective) FROM
-employee e join manages m ON bitemp_joinable(e.effective, m.effective);
+SELECT emp_name, e.dept, m.dept, mgr_name, interval_join(e.effective, m.effective) FROM
+employee e join manages m ON interval_joinable(e.effective, m.effective);
 
-SELECT emp_name, e.dept, m.dept, mgr_name, bitemp_join(e.effective, m.effective) FROM
-employee e join manages m ON bitemp_joinable(e.effective, m.effective) AND e.dept = m.dept;
+SELECT emp_name, e.dept, m.dept, mgr_name, interval_join(e.effective, m.effective) FROM
+employee e join manages m ON interval_joinable(e.effective, m.effective) AND e.dept = m.dept;
 
 DROP TABLE employee;
 DROP TABLE manages;

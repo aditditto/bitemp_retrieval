@@ -65,7 +65,7 @@ $BODY$
 LANGUAGE plpgsql;
 
 CREATE OR REPLACE
-FUNCTION bitemp_joinable(
+FUNCTION interval_joinable(
     a temporal_relationships.timeperiod,
     b temporal_relationships.timeperiod
     ) 
@@ -79,7 +79,7 @@ $BODY$
 LANGUAGE plpgsql;
 
 CREATE OR REPLACE
-FUNCTION bitemp_join(
+FUNCTION interval_join(
     a temporal_relationships.timeperiod,
     b temporal_relationships.timeperiod
     ) 
