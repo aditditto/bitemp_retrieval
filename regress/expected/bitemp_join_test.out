@@ -101,9 +101,9 @@ SELECT mgr_id, mgr_name, dept, effective FROM manages;
       2 | Jim      | Ship | ["Thu Oct 07 00:00:00 2010 PDT","Sat Oct 16 00:00:00 2010 PDT")
 (2 rows)
 
-SELECT emp_name, e.dept, m.dept, mgr_name, bitemp_timeperiod_join(e.effective, m.effective) FROM
-employee e join manages m ON bitemp_timeperiod_joinable(e.effective, m.effective);
- emp_name | dept | dept | mgr_name |                     bitemp_timeperiod_join                      
+SELECT emp_name, e.dept, m.dept, mgr_name, bitemp_join(e.effective, m.effective) FROM
+employee e join manages m ON bitemp_joinable(e.effective, m.effective);
+ emp_name | dept | dept | mgr_name |                           bitemp_join                           
 ----------+------+------+----------+-----------------------------------------------------------------
  Ron      | Ship | Load | Ed       | ["Sun Oct 03 00:00:00 2010 PDT","Wed Oct 06 00:00:00 2010 PDT")
  George   | Ship | Load | Ed       | ["Tue Oct 05 00:00:00 2010 PDT","Sat Oct 09 00:00:00 2010 PDT")
@@ -112,9 +112,9 @@ employee e join manages m ON bitemp_timeperiod_joinable(e.effective, m.effective
  Ron      | Mail | Ship | Jim      | ["Thu Oct 07 00:00:00 2010 PDT","Mon Oct 11 00:00:00 2010 PDT")
 (5 rows)
 
-SELECT emp_name, e.dept, m.dept, mgr_name, bitemp_timeperiod_join(e.effective, m.effective) FROM
-employee e join manages m ON bitemp_timeperiod_joinable(e.effective, m.effective) AND e.dept = m.dept;
- emp_name | dept | dept | mgr_name |                     bitemp_timeperiod_join                      
+SELECT emp_name, e.dept, m.dept, mgr_name, bitemp_join(e.effective, m.effective) FROM
+employee e join manages m ON bitemp_joinable(e.effective, m.effective) AND e.dept = m.dept;
+ emp_name | dept | dept | mgr_name |                           bitemp_join                           
 ----------+------+------+----------+-----------------------------------------------------------------
  George   | Ship | Ship | Jim      | ["Thu Oct 07 00:00:00 2010 PDT","Sat Oct 09 00:00:00 2010 PDT")
 (1 row)
