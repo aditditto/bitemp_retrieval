@@ -37,7 +37,6 @@ SELECT bitemp_contains_ts(
  f
 (1 row)
 
--- Outside effective & asserted
 SELECT bitemp_contains_ts(
     temporal_relationships.timeperiod('2010-10-10'::timestamptz, '2020-10-20'::timestamptz),
     temporal_relationships.timeperiod('2020-10-10'::timestamptz, '2020-10-20'::timestamptz),
@@ -46,6 +45,46 @@ SELECT bitemp_contains_ts(
 );
  bitemp_contains_ts 
 --------------------
+ f
+(1 row)
+
+-- Contains
+SELECT bitemp_contains_now(
+    temporal_relationships.timeperiod('-infinity', 'infinity'),
+    temporal_relationships.timeperiod('-infinity', 'infinity')
+);
+ bitemp_contains_now 
+---------------------
+ t
+(1 row)
+
+-- Outside effective range
+SELECT bitemp_contains_now(
+    temporal_relationships.timeperiod('-infinity', '1850-10-20'::timestamptz),
+    temporal_relationships.timeperiod('-infinity', 'infinity')
+);
+ bitemp_contains_now 
+---------------------
+ f
+(1 row)
+
+-- Outside asserted range
+SELECT bitemp_contains_now(
+    temporal_relationships.timeperiod('-infinity', 'infinity'),
+    temporal_relationships.timeperiod('-infinity', '1850-10-20'::timestamptz)
+);
+ bitemp_contains_now 
+---------------------
+ f
+(1 row)
+
+-- Outside effective & asserted
+SELECT bitemp_contains_now(
+    temporal_relationships.timeperiod('-infinity', '1850-10-20'::timestamptz),
+    temporal_relationships.timeperiod('-infinity', '1850-10-20'::timestamptz)
+);
+ bitemp_contains_now 
+---------------------
  f
 (1 row)
 
@@ -76,5 +115,22 @@ SELECT interval_contains_ts(
  interval_contains_ts 
 ----------------------
  f
+(1 row)
+
+SELECT interval_contains_now(
+    temporal_relationships.timeperiod('2020-10-10'::timestamptz, '2020-10-20'::timestamptz)
+);
+ interval_contains_now 
+-----------------------
+ f
+(1 row)
+
+-- Outside range
+SELECT interval_contains_now(
+    temporal_relationships.timeperiod('-infinity', 'infinity')
+);
+ interval_contains_now 
+-----------------------
+ t
 (1 row)
 

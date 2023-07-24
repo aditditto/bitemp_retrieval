@@ -24,6 +24,20 @@ $BODY$
 LANGUAGE plpgsql;
 
 CREATE OR REPLACE
+FUNCTION bitemp_contains_now(
+    effective_range temporal_relationships.timeperiod,
+    asserted_range temporal_relationships.timeperiod
+    ) 
+RETURNS BOOLEAN
+AS
+$BODY$
+BEGIN
+  RETURN now() <@ effective_range AND now() <@ asserted_range;  
+END;
+$BODY$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE
 FUNCTION interval_contains_ts(
     interv temporal_relationships.timeperiod,
     ts timestamptz
@@ -33,6 +47,19 @@ AS
 $BODY$
 BEGIN
   RETURN ts <@ interv;  
+END;
+$BODY$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE
+FUNCTION interval_contains_now(
+    interv temporal_relationships.timeperiod
+    ) 
+RETURNS BOOLEAN
+AS
+$BODY$
+BEGIN
+  RETURN now() <@ interv;  
 END;
 $BODY$
 LANGUAGE plpgsql;
