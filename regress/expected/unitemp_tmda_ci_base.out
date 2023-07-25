@@ -358,3 +358,4 @@ SELECT * FROM tmda_ci(
  163 |   600 |  1500 | ["1970-01-19 00:00:00+07","1970-01-22 00:00:00+07")
 (8 rows)
 
+DROP TABLE public.empl;

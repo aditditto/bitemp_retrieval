@@ -130,12 +130,15 @@ function tmda_ci_c(p_schema, p_table, p_group_by, p_aggr_funcs, p_aggr_target, p
                       const aggr_func = p_aggr_funcs[k];
                       let attr_scaling = 1;
 
-                      if (v_attr_props.get(p_aggr_target[k]) == 'malleable') {
+                      if (v_attr_props.get(p_aggr_target[k]) == 'malleable' || v_attr_props.get(p_aggr_target[k]) == 'atomic') {
                         let rowtend = isNaN(noderow.effective_end.getTime()) ? Date.now() : noderow.effective_end.getTime();
                         plv8.elog(log_level, `rowtend: ${rowtend}`);
                         plv8.elog(log_level, `g.tstart.getTime(): ${g.tstart.getTime()}`);
                         plv8.elog(log_level, `noderow.effective_start.getTime(): ${noderow.effective_start.getTime()}`);
                         attr_scaling = (g.tend.getTime() - g.tstart.getTime()) / (rowtend - noderow.effective_start.getTime());
+                      }
+                      if (v_attr_props.get(p_aggr_target[k]) == 'atomic' && attr_scaling != 1) {
+                        attr_scaling = 0;
                       }
                       plv8.elog(log_level, `p_aggr_target[k]: ${p_aggr_target[k]}`);
                       plv8.elog(log_level, `attr_scaling: ${attr_scaling}`);
@@ -163,7 +166,9 @@ function tmda_ci_c(p_schema, p_table, p_group_by, p_aggr_funcs, p_aggr_target, p
                           }
                         }
                       } else if (aggr_func == "count") {
-                        aggrResults[k]++;
+                        if (!(v_attr_props.get(p_aggr_target[k]) == 'atomic' && attr_scaling == 0)) {
+                          aggrResults[k]++;
+                        }
                       }
                     }
                   }
@@ -255,12 +260,15 @@ function tmda_ci_c(p_schema, p_table, p_group_by, p_aggr_funcs, p_aggr_target, p
                 const aggr_func = p_aggr_funcs[k];
                 let attr_scaling = 1;
 
-                if (v_attr_props.get(p_aggr_target[k]) == 'malleable') {
+                if (v_attr_props.get(p_aggr_target[k]) == 'malleable' || v_attr_props.get(p_aggr_target[k]) == 'atomic') {
                   let rowtend = isNaN(noderow.effective_end.getTime()) ? Date.now() : noderow.effective_end.getTime();
                   plv8.elog(log_level, `rowtend: ${rowtend}`);
                   plv8.elog(log_level, `g.tstart.getTime(): ${g.tstart.getTime()}`);
                   plv8.elog(log_level, `noderow.effective_start.getTime(): ${noderow.effective_start.getTime()}`);
                   attr_scaling = (g.tend.getTime() - g.tstart.getTime()) / (rowtend - noderow.effective_start.getTime());
+                }
+                if (v_attr_props.get(p_aggr_target[k]) == 'atomic' && attr_scaling != 1) {
+                  attr_scaling = 0;
                 }
                 plv8.elog(log_level, `p_aggr_target[k]: ${p_aggr_target[k]}`);
                 plv8.elog(log_level, `attr_scaling: ${attr_scaling}`);
@@ -288,7 +296,9 @@ function tmda_ci_c(p_schema, p_table, p_group_by, p_aggr_funcs, p_aggr_target, p
                     }
                   }
                 } else if (aggr_func == "count") {
-                  aggrResults[k]++;
+                  if (!(v_attr_props.get(p_aggr_target[k]) == 'atomic' && attr_scaling == 0)) {
+                    aggrResults[k]++;
+                  }
                 }
               }
             }

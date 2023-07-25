@@ -223,3 +223,5 @@ SELECT * FROM tmda_ci(
     max_s numeric,
     effective tstzrange
 ) ORDER BY LOWER(effective);
+
+DROP TABLE public.empl;
