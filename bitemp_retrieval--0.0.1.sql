@@ -8,6 +8,19 @@ LANGUAGE C IMMUTABLE STRICT
 SET search_path = 'temporal_relationships';
 
 CREATE OR REPLACE
+FUNCTION interval_len(
+    interv temporal_relationships.timeperiod
+    ) 
+RETURNS INTERVAL
+AS
+$BODY$
+BEGIN
+  RETURN age(UPPER(interv), LOWER(interv));  
+END;
+$BODY$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE
 FUNCTION bitemp_contains_ts(
     effective_range temporal_relationships.timeperiod,
     asserted_range temporal_relationships.timeperiod,

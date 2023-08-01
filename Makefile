@@ -8,6 +8,7 @@ OBJS = 	src/bitemp_retrieval.o \
 
 # Order is important, first test needs to install pg_bitemporal
 REGRESS = _install_pg_bitemporal \
+		  helper_functions_test \
 		  bitemp_contains_timeslice_test \
 		  bitemp_join_functions_test \
 		  bitemp_join_test \
