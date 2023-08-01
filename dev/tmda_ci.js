@@ -91,7 +91,7 @@ function tmda_ci_c(p_schema, p_table, p_group_by, p_aggr_funcs, p_aggr_target, p
     ${v_group_by_cols.join(", ")},
     ${v_aggr_target_cols.join(", ")},
     LOWER(effective) AS effective_start, UPPER(effective) AS effective_end
-    FROM ${`"${p_schema}"."${p_table}"`}
+    FROM ${`"${p_schema}"."${p_table}"`} WHERE now() <@ asserted
     ORDER BY LOWER(effective)`);
     const cursor = plan.cursor();
 
