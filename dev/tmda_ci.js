@@ -118,6 +118,7 @@ function tmda_ci_c(p_schema, p_table, p_group_by, p_aggr_funcs, p_aggr_target, p
                 g.tend = node.key; // gt[i].Te ← v.t;
 
                 let aggrResults = new Array(p_aggr_funcs.length).fill(0); // ResultTuple helpers
+                let counts = new Array(p_aggr_funcs.length).fill(0);
                 let count = 0;
                 tree.forEach(function(resultmember) { // ResultTuple(gt[i], F, C)
                   const nodeRows = resultmember.data;
@@ -137,63 +138,70 @@ function tmda_ci_c(p_schema, p_table, p_group_by, p_aggr_funcs, p_aggr_target, p
                         plv8.elog(log_level, `noderow.effective_start.getTime(): ${noderow.effective_start.getTime()}`);
                         attr_scaling = (g.tend.getTime() - g.tstart.getTime()) / (rowtend - noderow.effective_start.getTime());
                       }
-                      if (v_attr_props.get(p_aggr_target[k]) == 'atomic' && attr_scaling != 1) {
-                        attr_scaling = 0;
-                      }
                       plv8.elog(log_level, `p_aggr_target[k]: ${p_aggr_target[k]}`);
                       plv8.elog(log_level, `attr_scaling: ${attr_scaling}`);
 
-                      const rowval = noderow[p_aggr_target[k]] * attr_scaling;
+                      if (!(v_attr_props.get(p_aggr_target[k]) == 'atomic' && attr_scaling != 1)) {
+                        counts[k]++;
+                        const rowval = noderow[p_aggr_target[k]] * attr_scaling;
                       
-                      if (aggr_func == "avg") {
-                        aggrResults[k] += rowval;
-                      } else if (aggr_func == "sum") {
-                        aggrResults[k] += rowval;
-                      } else if (aggr_func == "max") {
-                        if (count === 1) { // First row
-                          aggrResults[k] = rowval;
-                        } else {
-                          if (rowval > aggrResults[k]) {
+                        if (aggr_func == "avg") {
+                          aggrResults[k] += rowval;
+                        } else if (aggr_func == "sum") {
+                          aggrResults[k] += rowval;
+                        } else if (aggr_func == "max") {
+                          if (count === 1) { // First row
                             aggrResults[k] = rowval;
+                          } else {
+                            if (rowval > aggrResults[k]) {
+                              aggrResults[k] = rowval;
+                            }
                           }
-                        }
-                      } else if (aggr_func == "min") {
-                        if (count === 1) {
-                          aggrResults[k] = rowval;
-                        } else {
-                          if (rowval < aggrResults[k]) {
+                        } else if (aggr_func == "min") {
+                          if (count === 1) {
                             aggrResults[k] = rowval;
+                          } else {
+                            if (rowval < aggrResults[k]) {
+                              aggrResults[k] = rowval;
+                            }
                           }
-                        }
-                      } else if (aggr_func == "count") {
-                        if (!(v_attr_props.get(p_aggr_target[k]) == 'atomic' && attr_scaling == 0)) {
-                          aggrResults[k]++;
+                        } else if (aggr_func == "count") {
+                            aggrResults[k]++;
                         }
                       }
                     }
                   }
                 });
                 
+                let meaningful = false;
                 for (let k = 0; k < p_aggr_funcs.length; k++) {
+                  if (counts[k] > 0) {
+                    meaningful = true;
+                  }
+      
                   const aggr_func = p_aggr_funcs[k];
                   if (aggr_func == "avg") {
-                    aggrResults[k] = aggrResults[k] / count;
+                    aggrResults[k] = aggrResults[k] / counts[k];
                   }
                 }
-
-                if (count > 0) {
+      
+                if (meaningful) {
                   const result_period = `["${toIsoString(g.tstart)}", "${isNaN(g.tend) ? 'infinity' : toIsoString(g.tend)}")`
                   let to_return = {};
                   for (let k = 0; k < p_aggr_fieldnames.length; k++) {
                     const fieldname = p_aggr_fieldnames[k];
-                    to_return[fieldname] = aggrResults[k];
+                    if (counts[k] > 0) {
+                      to_return[fieldname] = aggrResults[k];
+                    } else {
+                      to_return[fieldname] = null;
+                    }
                   }
-
+      
                   for (let k = 0; k < p_group_by.length; k++) {
                     const fieldname = p_group_by[k];
                     to_return[fieldname] = g[fieldname];
                   }
-
+      
                   to_return.effective = result_period;
                   plv8.return_next(to_return);
                 }
@@ -247,6 +255,7 @@ function tmda_ci_c(p_schema, p_table, p_group_by, p_aggr_funcs, p_aggr_target, p
           g.tend = node.key; // gt[i].Te ← v.t;
 
           let aggrResults = new Array(p_aggr_funcs.length).fill(0); // ResultTuple helpers
+          let counts = new Array(p_aggr_funcs.length).fill(0);
           let count = 0;
           tree.forEach(function(resultmember) { // ResultTuple(gt[i], F, C)
             const nodeRows = resultmember.data;
@@ -267,56 +276,63 @@ function tmda_ci_c(p_schema, p_table, p_group_by, p_aggr_funcs, p_aggr_target, p
                   plv8.elog(log_level, `noderow.effective_start.getTime(): ${noderow.effective_start.getTime()}`);
                   attr_scaling = (g.tend.getTime() - g.tstart.getTime()) / (rowtend - noderow.effective_start.getTime());
                 }
-                if (v_attr_props.get(p_aggr_target[k]) == 'atomic' && attr_scaling != 1) {
-                  attr_scaling = 0;
-                }
                 plv8.elog(log_level, `p_aggr_target[k]: ${p_aggr_target[k]}`);
                 plv8.elog(log_level, `attr_scaling: ${attr_scaling}`);
 
-                const rowval = noderow[p_aggr_target[k]] * attr_scaling;
+                if (!(v_attr_props.get(p_aggr_target[k]) == 'atomic' && attr_scaling != 1)) {
+                  counts[k]++;
+                  const rowval = noderow[p_aggr_target[k]] * attr_scaling;
                 
-                if (aggr_func == "avg") {
-                  aggrResults[k] += rowval;
-                } else if (aggr_func == "sum") {
-                  aggrResults[k] += rowval;
-                } else if (aggr_func == "max") {
-                  if (count === 1) { // First row
-                    aggrResults[k] = rowval;
-                  } else {
-                    if (rowval > aggrResults[k]) {
+                  if (aggr_func == "avg") {
+                    aggrResults[k] += rowval;
+                  } else if (aggr_func == "sum") {
+                    aggrResults[k] += rowval;
+                  } else if (aggr_func == "max") {
+                    if (count === 1) { // First row
                       aggrResults[k] = rowval;
+                    } else {
+                      if (rowval > aggrResults[k]) {
+                        aggrResults[k] = rowval;
+                      }
                     }
-                  }
-                } else if (aggr_func == "min") {
-                  if (count === 1) {
-                    aggrResults[k] = rowval;
-                  } else {
-                    if (rowval < aggrResults[k]) {
+                  } else if (aggr_func == "min") {
+                    if (count === 1) {
                       aggrResults[k] = rowval;
+                    } else {
+                      if (rowval < aggrResults[k]) {
+                        aggrResults[k] = rowval;
+                      }
                     }
-                  }
-                } else if (aggr_func == "count") {
-                  if (!(v_attr_props.get(p_aggr_target[k]) == 'atomic' && attr_scaling == 0)) {
-                    aggrResults[k]++;
+                  } else if (aggr_func == "count") {
+                      aggrResults[k]++;
                   }
                 }
               }
             }
           });
           
+          let meaningful = false;
           for (let k = 0; k < p_aggr_funcs.length; k++) {
+            if (counts[k] > 0) {
+              meaningful = true;
+            }
+
             const aggr_func = p_aggr_funcs[k];
             if (aggr_func == "avg") {
-              aggrResults[k] = aggrResults[k] / count;
+              aggrResults[k] = aggrResults[k] / counts[k];
             }
           }
 
-          if (count > 0) {
+          if (meaningful) {
             const result_period = `["${toIsoString(g.tstart)}", "${isNaN(g.tend) ? 'infinity' : toIsoString(g.tend)}")`
             let to_return = {};
             for (let k = 0; k < p_aggr_fieldnames.length; k++) {
               const fieldname = p_aggr_fieldnames[k];
-              to_return[fieldname] = aggrResults[k];
+              if (counts[k] > 0) {
+                to_return[fieldname] = aggrResults[k];
+              } else {
+                to_return[fieldname] = null;
+              }
             }
 
             for (let k = 0; k < p_group_by.length; k++) {
