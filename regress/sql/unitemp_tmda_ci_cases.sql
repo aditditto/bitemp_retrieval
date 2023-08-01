@@ -90,7 +90,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
 
 SELECT n, cid, d, p, h, s, effective FROM empl WHERE now() <@ asserted ORDER BY LOWER(effective);
 
-SELECT * FROM tmda_ci(
+SELECT * FROM tmda_ci_now(
     'public',
     'empl',
     ARRAY['d'],
@@ -103,7 +103,7 @@ SELECT * FROM tmda_ci(
     effective tstzrange
 ) ORDER BY d DESC, lower(effective);
 
-SELECT * FROM tmda_ci(
+SELECT * FROM tmda_ci_now(
     'public',
     'empl',
     ARRAY['d'],
@@ -116,7 +116,7 @@ SELECT * FROM tmda_ci(
     effective tstzrange
 ) ORDER BY d DESC, lower(effective);
 
-SELECT * FROM tmda_ci(
+SELECT * FROM tmda_ci_now(
     'public',
     'empl',
     ARRAY['d'],
@@ -129,7 +129,7 @@ SELECT * FROM tmda_ci(
     effective tstzrange
 ) ORDER BY d DESC, lower(effective);
 
-SELECT * FROM tmda_ci(
+SELECT * FROM tmda_ci_now(
     'public',
     'empl',
     ARRAY['d'],
@@ -142,7 +142,7 @@ SELECT * FROM tmda_ci(
     effective tstzrange
 ) ORDER BY d DESC, lower(effective);
 
-SELECT * FROM tmda_ci(
+SELECT * FROM tmda_ci_now(
     'public',
     'empl',
     ARRAY['d'],
@@ -159,7 +159,7 @@ SELECT * FROM bitemporal_internal.ll_register_temporal_attribute_property('publi
 
 SELECT * FROM bitemporal_internal.temporal_attribute_properties;
 
-SELECT * FROM tmda_ci(
+SELECT * FROM tmda_ci_now(
     'public',
     'empl',
     ARRAY['d'],
@@ -172,7 +172,7 @@ SELECT * FROM tmda_ci(
     effective tstzrange
 ) ORDER BY d DESC, lower(effective);
 
-SELECT * FROM tmda_ci(
+SELECT * FROM tmda_ci_now(
     'public',
     'empl',
     ARRAY['d'],
@@ -185,7 +185,7 @@ SELECT * FROM tmda_ci(
     effective tstzrange
 ) ORDER BY d DESC, lower(effective);
 
-SELECT * FROM tmda_ci(
+SELECT * FROM tmda_ci_now(
     'public',
     'empl',
     ARRAY['d'],
@@ -198,7 +198,7 @@ SELECT * FROM tmda_ci(
     effective tstzrange
 ) ORDER BY d DESC, lower(effective);
 
-SELECT * FROM tmda_ci(
+SELECT * FROM tmda_ci_now(
     'public',
     'empl',
     ARRAY['d'],
@@ -211,7 +211,7 @@ SELECT * FROM tmda_ci(
     effective tstzrange
 ) ORDER BY d DESC, lower(effective);
 
-SELECT * FROM tmda_ci(
+SELECT * FROM tmda_ci_now(
     'public',
     'empl',
     ARRAY['d'],
@@ -229,7 +229,7 @@ SELECT * FROM bitemporal_internal.temporal_attribute_properties;
 
 SELECT * FROM bitemporal_internal.ll_register_temporal_attribute_property('public', 'empl', 'h', 'atomic');
 
-SELECT * FROM tmda_ci(
+SELECT * FROM tmda_ci_now(
     'public',
     'empl',
     ARRAY['d'],
@@ -242,7 +242,7 @@ SELECT * FROM tmda_ci(
     effective tstzrange
 ) ORDER BY d DESC, lower(effective);
 
-SELECT * FROM tmda_ci(
+SELECT * FROM tmda_ci_now(
     'public',
     'empl',
     ARRAY['d'],
@@ -255,7 +255,7 @@ SELECT * FROM tmda_ci(
     effective tstzrange
 ) ORDER BY d DESC, lower(effective);
 
-SELECT * FROM tmda_ci(
+SELECT * FROM tmda_ci_now(
     'public',
     'empl',
     ARRAY['d'],
@@ -268,7 +268,7 @@ SELECT * FROM tmda_ci(
     effective tstzrange
 ) ORDER BY d DESC, lower(effective);
 
-SELECT * FROM tmda_ci(
+SELECT * FROM tmda_ci_now(
     'public',
     'empl',
     ARRAY['d'],
@@ -281,7 +281,7 @@ SELECT * FROM tmda_ci(
     effective tstzrange
 ) ORDER BY d DESC, lower(effective);
 
-SELECT * FROM tmda_ci(
+SELECT * FROM tmda_ci_now(
     'public',
     'empl',
     ARRAY['d'],

@@ -248,7 +248,7 @@ $$
 $$
 LANGUAGE plv8;
 
-CREATE FUNCTION tmda_ci(
+CREATE FUNCTION tmda_ci_now(
   p_schema TEXT,
   p_table TEXT,
   p_group_by TEXT[],
