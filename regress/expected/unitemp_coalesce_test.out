@@ -133,6 +133,19 @@ SELECT * FROM unitemp_coalesce_select('SELECT emp_name, dept, effective FROM emp
  Ron      | Ship | ["Sun Oct 10 00:00:00 2010 PDT",infinity)
 (4 rows)
 
+SELECT * FROM unitemp_coalesce_select_effective('SELECT emp_name, dept, effective FROM employee WHERE now() <@ asserted'::text, 
+    ARRAY['emp_name', 'dept']
+    ) AS (emp_name text,
+            dept text,
+            effective tstzrange) ORDER BY emp_name, effective;
+ emp_name | dept |                            effective                            
+----------+------+-----------------------------------------------------------------
+ George   | Ship | ["Tue Oct 05 00:00:00 2010 PDT","Sat Oct 09 00:00:00 2010 PDT")
+ Ron      | Ship | ["Fri Oct 01 00:00:00 2010 PDT","Wed Oct 06 00:00:00 2010 PDT")
+ Ron      | Mail | ["Wed Oct 06 00:00:00 2010 PDT","Sun Oct 10 00:00:00 2010 PDT")
+ Ron      | Ship | ["Sun Oct 10 00:00:00 2010 PDT",infinity)
+(4 rows)
+
 DROP TABLE employee;
 DROP TABLE manages;
 ERROR:  table "manages" does not exist
