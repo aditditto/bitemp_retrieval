@@ -1,5 +1,4 @@
 DROP EXTENSION bitemp_retrieval;
-ERROR:  extension "bitemp_retrieval" does not exist
 CREATE EXTENSION bitemp_retrieval;
 -- Contains
 SELECT bitemp_contains_ts(

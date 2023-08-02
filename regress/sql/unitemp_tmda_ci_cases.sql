@@ -293,3 +293,5 @@ SELECT * FROM tmda_ci_now(
     count_h numeric,
     effective tstzrange
 ) ORDER BY d DESC, lower(effective);
+
+DROP TABLE public.empl;
