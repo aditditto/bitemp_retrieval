@@ -46,7 +46,7 @@ SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
 select now();
               now              
 -------------------------------
- 1990-01-01 00:00:02.204109+07
+ 1990-01-01 00:00:02.421388+07
 (1 row)
 
 SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
@@ -299,7 +299,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
                     1
 (1 row)
 
-SELECT name, budget, mgrid, effective FROM public.dept WHERE asserted @> now();
+SELECT name, budget, mgrid, effective FROM public.dept WHERE now() <@ asserted;
  name | budget | mgrid |                      effective                      
 ------+--------+-------+-----------------------------------------------------
  Toy  |    150 | DI    | ["1982-01-01 00:00:00+07","1984-08-01 00:00:00+07")
@@ -330,6 +330,86 @@ SELECT name, empid, effective FROM public.skills WHERE now() <@ asserted;
  Driving   | ED    | ["1984-06-01 00:00:00+07","1988-06-01 00:00:00+07")
  Directing | DI    | ["1982-01-01 00:00:00+07",infinity)
 (5 rows)
+
+SELECT name FROM unitemp_coalesce_select_effective('SELECT name, mgrid, effective FROM dept WHERE now() <@ asserted', ARRAY['name', 'mgrid'])
+  AS (
+    name VARCHAR(30),
+    mgrid CHAR(2),
+    effective tstzrange
+  ) ORDER BY interval_len(effective) ASC LIMIT 1;
+ name 
+------
+ Book
+(1 row)
+
+SELECT id, deptname, effective FROM emp WHERE now() <@ asserted;
+ id |            deptname            |                      effective                      
+----+--------------------------------+-----------------------------------------------------
+ ED | Toy                            | ["1982-02-01 00:00:00+07","1982-06-01 00:00:00+07")
+ ED | Toy                            | ["1982-06-01 00:00:00+07","1985-02-01 00:00:00+07")
+ ED | Toy                            | ["1985-02-01 00:00:00+07","1987-04-01 00:00:00+07")
+ ED | Book                           | ["1987-04-01 00:00:00+07","1988-01-01 00:00:00+07")
+ ED | Book                           | ["1988-01-01 00:00:00+07",infinity)
+ DI | Toy                            | ["1982-01-01 00:00:00+07","1984-08-01 00:00:00+07")
+ DI | Toy                            | ["1984-08-01 00:00:00+07","1986-09-01 00:00:00+07")
+ DI | Toy                            | ["1986-09-01 00:00:00+07",infinity)
+(8 rows)
+
+SELECT * FROM unitemp_coalesce_select_effective('SELECT id, deptname, effective FROM emp WHERE now() <@ asserted', ARRAY['id', 'deptname'])
+AS ce1 (
+  id CHAR(2),
+  deptname VARCHAR(30),
+  effective tstzrange
+) JOIN unitemp_coalesce_select_effective('SELECT id, deptname, effective FROM emp WHERE now() <@ asserted', ARRAY['id', 'deptname'])
+AS ce2 (
+  id CHAR(2),
+  deptname VARCHAR(30),
+  effective tstzrange
+) ON ce1.deptname = ce2.deptname
+WHERE ce2.id = 'DI' AND ce1.deptname='Book' AND interval_len(ce1.effective) >= interval_len(ce2.effective);
+ id | deptname | effective | id | deptname | effective 
+----+----------+-----------+----+----------+-----------
+(0 rows)
+
+SELECT * FROM unitemp_coalesce_select_effective('SELECT id, deptname, effective FROM emp WHERE now() <@ asserted', ARRAY['id', 'deptname'])
+AS ce1 (
+  id CHAR(2),
+  deptname VARCHAR(30),
+  effective tstzrange
+) JOIN unitemp_coalesce_select_effective('SELECT id, deptname, effective FROM emp WHERE now() <@ asserted', ARRAY['id', 'deptname'])
+AS ce2 (
+  id CHAR(2),
+  deptname VARCHAR(30),
+  effective tstzrange
+) ON ce1.deptname = ce2.deptname WHERE TRIM(ce1.deptname) = 'Toy' AND 
+ce2.id = 'DI' AND ce1.id != ce2.id AND 
+interval_len(ce1.effective) <= interval_len(ce2.effective);
+ id |            deptname            |                      effective                      | id |            deptname            |              effective              
+----+--------------------------------+-----------------------------------------------------+----+--------------------------------+-------------------------------------
+ ED | Toy                            | ["1982-02-01 00:00:00+07","1987-04-01 00:00:00+07") | DI | Toy                            | ["1982-01-01 00:00:00+07",infinity)
+(1 row)
+
+SELECT *, interval_len(effective) FROM unitemp_coalesce_select_effective('SELECT id, salary, effective FROM emp WHERE now() <@ asserted', ARRAY['id', 'salary'])
+AS ce1 (
+  id CHAR(2),
+  salary numeric,
+  effective tstzrange
+) ORDER BY interval_len(effective) DESC LIMIT 1;
+ id | salary |              effective              |          interval_len           
+----+--------+-------------------------------------+---------------------------------
+ ED |     40 | ["1985-02-01 00:00:00+07",infinity) | @ 4 years 11 mons 2.495944 secs
+(1 row)
+
+SELECT DISTINCT e1.salary FROM emp e1 JOIN emp e2 ON interval_joinable(e1.effective, e2.effective) AND
+  e1.deptname = e2.deptname
+  WHERE now() <@ e1.asserted AND now() <@ e2.asserted AND
+  e1.id = 'ED' AND e2.id = 'DI';
+ salary 
+--------
+     20
+     30
+     40
+(3 rows)
 
 DROP TABLE public.emp;
 DROP TABLE public.dept;

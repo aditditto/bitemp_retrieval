@@ -15,7 +15,11 @@ RETURNS INTERVAL
 AS
 $BODY$
 BEGIN
-  RETURN age(UPPER(interv), LOWER(interv));  
+  IF UPPER(interv)='infinity' THEN
+    RETURN age(now(), LOWER(interv));
+  ELSE
+    RETURN age(UPPER(interv), LOWER(interv));
+  END IF;
 END;
 $BODY$
 LANGUAGE plpgsql;
