@@ -86,5 +86,10 @@ SELECT * FROM unitemp_coalesce_select_effective('SELECT emp_name, dept, effectiv
             dept text,
             effective tstzrange) ORDER BY emp_name, effective;
 
+SELECT * FROM unitemp_coalesce_table_effective('public', 'employee', ARRAY['emp_name', 'dept'])
+AS (emp_name text,
+            dept text,
+            effective tstzrange) ORDER BY emp_name, effective;
+
 DROP TABLE employee;
 DROP TABLE manages;

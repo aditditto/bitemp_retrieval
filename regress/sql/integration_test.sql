@@ -32,7 +32,7 @@ SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
     $$,
    'name');
 
-select now();
+select now()::date;
 
 SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     'public.dept',
@@ -238,7 +238,7 @@ AS ce2 (
 ce2.id = 'DI' AND ce1.id != ce2.id AND 
 interval_len(ce1.effective) <= interval_len(ce2.effective);
 
-SELECT *, interval_len(effective) FROM unitemp_coalesce_select_effective('SELECT id, salary, effective FROM emp WHERE now() <@ asserted', ARRAY['id', 'salary'])
+SELECT * FROM unitemp_coalesce_select_effective('SELECT id, salary, effective FROM emp WHERE now() <@ asserted', ARRAY['id', 'salary'])
 AS ce1 (
   id CHAR(2),
   salary numeric,

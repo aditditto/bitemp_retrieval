@@ -43,10 +43,10 @@ SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
  t
 (1 row)
 
-select now();
-              now              
--------------------------------
- 1990-01-01 00:00:02.421388+07
+select now()::date;
+    now     
+------------
+ 1990-01-01
 (1 row)
 
 SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
@@ -389,15 +389,15 @@ interval_len(ce1.effective) <= interval_len(ce2.effective);
  ED | Toy                            | ["1982-02-01 00:00:00+07","1987-04-01 00:00:00+07") | DI | Toy                            | ["1982-01-01 00:00:00+07",infinity)
 (1 row)
 
-SELECT *, interval_len(effective) FROM unitemp_coalesce_select_effective('SELECT id, salary, effective FROM emp WHERE now() <@ asserted', ARRAY['id', 'salary'])
+SELECT * FROM unitemp_coalesce_select_effective('SELECT id, salary, effective FROM emp WHERE now() <@ asserted', ARRAY['id', 'salary'])
 AS ce1 (
   id CHAR(2),
   salary numeric,
   effective tstzrange
 ) ORDER BY interval_len(effective) DESC LIMIT 1;
- id | salary |              effective              |          interval_len           
-----+--------+-------------------------------------+---------------------------------
- ED |     40 | ["1985-02-01 00:00:00+07",infinity) | @ 4 years 11 mons 2.495944 secs
+ id | salary |              effective              
+----+--------+-------------------------------------
+ ED |     40 | ["1985-02-01 00:00:00+07",infinity)
 (1 row)
 
 SELECT DISTINCT e1.salary FROM emp e1 JOIN emp e2 ON interval_joinable(e1.effective, e2.effective) AND
