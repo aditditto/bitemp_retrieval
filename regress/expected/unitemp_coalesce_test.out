@@ -150,7 +150,6 @@ SELECT * FROM unitemp_coalesce_table_effective('public', 'employee', ARRAY['emp_
 AS (emp_name text,
             dept text,
             effective tstzrange) ORDER BY emp_name, effective;
-NOTICE:  SELECT "emp_name","dept", "effective" FROM "public"."employee" WHERE now() <@ asserted ORDER BY "emp_name","dept", "effective"
  emp_name | dept |                            effective                            
 ----------+------+-----------------------------------------------------------------
  George   | Ship | ["Tue Oct 05 00:00:00 2010 PDT","Sat Oct 09 00:00:00 2010 PDT")

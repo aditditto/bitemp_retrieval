@@ -5,7 +5,7 @@
     my $p_temporal_field = 'effective';
 
     my $query = "SELECT $fields_string, \"$p_temporal_field\" FROM \"$p_schema\".\"$p_table\" WHERE now() <@ asserted ORDER BY $fields_string, \"$p_temporal_field\"";
-    elog(NOTICE, $query);
+    # elog(NOTICE, $query);
     my $sth = spi_query($query);
 
     my $curr_row;

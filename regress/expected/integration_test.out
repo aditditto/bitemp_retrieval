@@ -331,7 +331,7 @@ SELECT name, empid, effective FROM public.skills WHERE now() <@ asserted;
  Directing | DI    | ["1982-01-01 00:00:00+07",infinity)
 (5 rows)
 
-SELECT name FROM unitemp_coalesce_select_effective('SELECT name, mgrid, effective FROM dept WHERE now() <@ asserted', ARRAY['name', 'mgrid'])
+SELECT name FROM unitemp_coalesce_table_effective('public', 'dept', ARRAY['name', 'mgrid'])
   AS (
     name VARCHAR(30),
     mgrid CHAR(2),
@@ -355,12 +355,12 @@ SELECT id, deptname, effective FROM emp WHERE now() <@ asserted;
  DI | Toy                            | ["1986-09-01 00:00:00+07",infinity)
 (8 rows)
 
-SELECT * FROM unitemp_coalesce_select_effective('SELECT id, deptname, effective FROM emp WHERE now() <@ asserted', ARRAY['id', 'deptname'])
+SELECT * FROM unitemp_coalesce_table_effective('public', 'emp', ARRAY['id', 'deptname'])
 AS ce1 (
   id CHAR(2),
   deptname VARCHAR(30),
   effective tstzrange
-) JOIN unitemp_coalesce_select_effective('SELECT id, deptname, effective FROM emp WHERE now() <@ asserted', ARRAY['id', 'deptname'])
+) JOIN unitemp_coalesce_table_effective('public', 'emp', ARRAY['id', 'deptname'])
 AS ce2 (
   id CHAR(2),
   deptname VARCHAR(30),
@@ -371,12 +371,12 @@ WHERE ce2.id = 'DI' AND ce1.deptname='Book' AND interval_len(ce1.effective) >= i
 ----+----------+-----------+----+----------+-----------
 (0 rows)
 
-SELECT * FROM unitemp_coalesce_select_effective('SELECT id, deptname, effective FROM emp WHERE now() <@ asserted', ARRAY['id', 'deptname'])
+SELECT * FROM unitemp_coalesce_table_effective('public','emp', ARRAY['id', 'deptname'])
 AS ce1 (
   id CHAR(2),
   deptname VARCHAR(30),
   effective tstzrange
-) JOIN unitemp_coalesce_select_effective('SELECT id, deptname, effective FROM emp WHERE now() <@ asserted', ARRAY['id', 'deptname'])
+) JOIN unitemp_coalesce_table_effective('public','emp', ARRAY['id', 'deptname'])
 AS ce2 (
   id CHAR(2),
   deptname VARCHAR(30),
@@ -389,7 +389,7 @@ interval_len(ce1.effective) <= interval_len(ce2.effective);
  ED | Toy                            | ["1982-02-01 00:00:00+07","1987-04-01 00:00:00+07") | DI | Toy                            | ["1982-01-01 00:00:00+07",infinity)
 (1 row)
 
-SELECT * FROM unitemp_coalesce_select_effective('SELECT id, salary, effective FROM emp WHERE now() <@ asserted', ARRAY['id', 'salary'])
+SELECT * FROM unitemp_coalesce_table_effective('public','emp', ARRAY['id', 'salary'])
 AS ce1 (
   id CHAR(2),
   salary numeric,
