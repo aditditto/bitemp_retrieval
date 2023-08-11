@@ -202,7 +202,10 @@ SELECT name, budget, mgrid, effective FROM public.dept WHERE now() <@ asserted;
 SELECT id, name, salary, gender, dob, deptname, effective FROM public.emp WHERE now() <@ asserted;
 SELECT name, empid, effective FROM public.skills WHERE now() <@ asserted;
 
-SELECT name FROM unitemp_coalesce_table_effective('public', 'dept', ARRAY['name', 'mgrid'])
+SELECT name FROM unitemp_coalesce_table_effective(
+  'public', 'dept', 
+  ARRAY['name', 'mgrid']
+  )
   AS (
     name VARCHAR(30),
     mgrid CHAR(2),
@@ -211,18 +214,21 @@ SELECT name FROM unitemp_coalesce_table_effective('public', 'dept', ARRAY['name'
 
 SELECT id, deptname, effective FROM emp WHERE now() <@ asserted;
 
-SELECT * FROM unitemp_coalesce_table_effective('public', 'emp', ARRAY['id', 'deptname'])
+SELECT * FROM unitemp_coalesce_table_effective('public', 'emp', 
+  ARRAY['id', 'deptname'])
 AS ce1 (
   id CHAR(2),
   deptname VARCHAR(30),
   effective tstzrange
-) JOIN unitemp_coalesce_table_effective('public', 'emp', ARRAY['id', 'deptname'])
+) JOIN unitemp_coalesce_table_effective('public', 'emp', 
+  ARRAY['id', 'deptname'])
 AS ce2 (
   id CHAR(2),
   deptname VARCHAR(30),
   effective tstzrange
 ) ON ce1.deptname = ce2.deptname
-WHERE ce2.id = 'DI' AND ce1.deptname='Book' AND interval_len(ce1.effective) >= interval_len(ce2.effective);
+WHERE ce2.id = 'DI' AND ce1.deptname='Book' AND 
+interval_len(ce1.effective) >= interval_len(ce2.effective);
 
 SELECT * FROM unitemp_coalesce_table_effective('public','emp', ARRAY['id', 'deptname'])
 AS ce1 (
@@ -238,16 +244,21 @@ AS ce2 (
 ce2.id = 'DI' AND ce1.id != ce2.id AND 
 interval_len(ce1.effective) <= interval_len(ce2.effective);
 
-SELECT * FROM unitemp_coalesce_table_effective('public','emp', ARRAY['id', 'salary'])
+SELECT * FROM unitemp_coalesce_table_effective(
+  'public','emp', 
+  ARRAY['id', 'salary'])
 AS ce1 (
   id CHAR(2),
   salary numeric,
   effective tstzrange
 ) ORDER BY interval_len(effective) DESC LIMIT 1;
 
-SELECT DISTINCT e1.salary FROM emp e1 JOIN emp e2 ON interval_joinable(e1.effective, e2.effective) AND
+SELECT DISTINCT e1.salary FROM 
+emp e1 JOIN emp e2 ON 
+  interval_joinable(e1.effective, e2.effective) AND
   e1.deptname = e2.deptname
-  WHERE now() <@ e1.asserted AND now() <@ e2.asserted AND
+WHERE interval_contains_now(e1.asserted) AND 
+  interval_contains_now(e2.asserted) AND
   e1.id = 'ED' AND e2.id = 'DI';
 
 DROP TABLE public.emp;
