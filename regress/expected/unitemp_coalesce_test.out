@@ -125,12 +125,12 @@ SELECT * FROM unitemp_coalesce_select('SELECT emp_name, dept, effective FROM emp
     ) AS (emp_name text,
             dept text,
             effective tstzrange) ORDER BY emp_name, effective;
- emp_name | dept |                            effective                            
-----------+------+-----------------------------------------------------------------
- George   | Ship | ["Tue Oct 05 00:00:00 2010 PDT","Sat Oct 09 00:00:00 2010 PDT")
- Ron      | Ship | ["Fri Oct 01 00:00:00 2010 PDT","Wed Oct 06 00:00:00 2010 PDT")
- Ron      | Mail | ["Wed Oct 06 00:00:00 2010 PDT","Sun Oct 10 00:00:00 2010 PDT")
- Ron      | Ship | ["Sun Oct 10 00:00:00 2010 PDT",infinity)
+ emp_name | dept |                      effective                      
+----------+------+-----------------------------------------------------
+ George   | Ship | ["2010-10-05 00:00:00-07","2010-10-09 00:00:00-07")
+ Ron      | Ship | ["2010-10-01 00:00:00-07","2010-10-06 00:00:00-07")
+ Ron      | Mail | ["2010-10-06 00:00:00-07","2010-10-10 00:00:00-07")
+ Ron      | Ship | ["2010-10-10 00:00:00-07",infinity)
 (4 rows)
 
 SELECT * FROM unitemp_coalesce_select_effective('SELECT emp_name, dept, effective FROM employee WHERE now() <@ asserted'::text, 
@@ -138,25 +138,39 @@ SELECT * FROM unitemp_coalesce_select_effective('SELECT emp_name, dept, effectiv
     ) AS (emp_name text,
             dept text,
             effective tstzrange) ORDER BY emp_name, effective;
- emp_name | dept |                            effective                            
-----------+------+-----------------------------------------------------------------
- George   | Ship | ["Tue Oct 05 00:00:00 2010 PDT","Sat Oct 09 00:00:00 2010 PDT")
- Ron      | Ship | ["Fri Oct 01 00:00:00 2010 PDT","Wed Oct 06 00:00:00 2010 PDT")
- Ron      | Mail | ["Wed Oct 06 00:00:00 2010 PDT","Sun Oct 10 00:00:00 2010 PDT")
- Ron      | Ship | ["Sun Oct 10 00:00:00 2010 PDT",infinity)
+ emp_name | dept |                      effective                      
+----------+------+-----------------------------------------------------
+ George   | Ship | ["2010-10-05 00:00:00-07","2010-10-09 00:00:00-07")
+ Ron      | Ship | ["2010-10-01 00:00:00-07","2010-10-06 00:00:00-07")
+ Ron      | Mail | ["2010-10-06 00:00:00-07","2010-10-10 00:00:00-07")
+ Ron      | Ship | ["2010-10-10 00:00:00-07",infinity)
 (4 rows)
 
 SELECT * FROM unitemp_coalesce_table_effective('public', 'employee', ARRAY['emp_name', 'dept'])
 AS (emp_name text,
             dept text,
             effective tstzrange) ORDER BY emp_name, effective;
- emp_name | dept |                            effective                            
-----------+------+-----------------------------------------------------------------
- George   | Ship | ["Tue Oct 05 00:00:00 2010 PDT","Sat Oct 09 00:00:00 2010 PDT")
- Ron      | Ship | ["Fri Oct 01 00:00:00 2010 PDT","Wed Oct 06 00:00:00 2010 PDT")
- Ron      | Mail | ["Wed Oct 06 00:00:00 2010 PDT","Sun Oct 10 00:00:00 2010 PDT")
- Ron      | Ship | ["Sun Oct 10 00:00:00 2010 PDT",infinity)
+ emp_name | dept |                      effective                      
+----------+------+-----------------------------------------------------
+ George   | Ship | ["2010-10-05 00:00:00-07","2010-10-09 00:00:00-07")
+ Ron      | Ship | ["2010-10-01 00:00:00-07","2010-10-06 00:00:00-07")
+ Ron      | Mail | ["2010-10-06 00:00:00-07","2010-10-10 00:00:00-07")
+ Ron      | Ship | ["2010-10-10 00:00:00-07",infinity)
 (4 rows)
+
+SELECT * FROM v8_select_test('dsadsa', '1 hour'::interval);
+INFO:  NaN
+INFO:  NaN
+INFO:  false
+INFO:  false
+INFO:  [-infinity,infinity]
+INFO:  string
+INFO:  3600
+INFO:  string
+ v8_select_test 
+----------------
+ 
+(1 row)
 
 DROP TABLE employee;
 DROP TABLE manages;
