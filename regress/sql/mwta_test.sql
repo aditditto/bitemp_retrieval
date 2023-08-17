@@ -65,4 +65,17 @@ SELECT * FROM tmda_ci_now(
     effective tstzrange
 ) ORDER BY lower(effective);
 
+SELECT * FROM mwta_now(
+    'public',
+    'checkout',
+    '{}',
+    ARRAY['count'],
+    ARRAY['custid'],
+    ARRAY['count'],
+    '2 days'::interval
+) AS (
+    count numeric,
+    effective tstzrange
+) ORDER BY lower(effective);
+
 DROP TABLE checkout;
