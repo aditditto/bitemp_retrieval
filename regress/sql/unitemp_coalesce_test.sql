@@ -91,7 +91,7 @@ AS (emp_name text,
             dept text,
             effective tstzrange) ORDER BY emp_name, effective;
 
-SELECT * FROM v8_select_test('dsadsa', '1 hour'::interval);
+SELECT * FROM v8_select_test('dsadsa', '1 hour'::interval, '{}');
 
 DROP TABLE employee;
 DROP TABLE manages;

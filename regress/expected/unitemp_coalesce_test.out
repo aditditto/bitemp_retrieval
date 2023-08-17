@@ -158,7 +158,7 @@ AS (emp_name text,
  Ron      | Ship | ["2010-10-10 00:00:00-07",infinity)
 (4 rows)
 
-SELECT * FROM v8_select_test('dsadsa', '1 hour'::interval);
+SELECT * FROM v8_select_test('dsadsa', '1 hour'::interval, '{}');
 INFO:  NaN
 INFO:  NaN
 INFO:  false
@@ -167,6 +167,7 @@ INFO:  [-infinity,infinity]
 INFO:  string
 INFO:  3600
 INFO:  string
+INFO:  0
  v8_select_test 
 ----------------
  

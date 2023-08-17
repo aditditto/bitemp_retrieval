@@ -34,26 +34,42 @@ function tmda_ci_c(p_schema, p_table, p_group_by, p_aggr_funcs, p_aggr_target, p
 
     const v_group_by_q = `SELECT column_name, data_type FROM information_schema.columns WHERE 
     table_schema='${p_schema}' AND table_name='${p_table}' AND column_name IN (${p_group_by.map(x => `'${x}'`).join(', ')})`;
-    plv8.elog(log_level, v_group_by_q);
-    var v_group_by = plv8.execute(v_group_by_q);
-    plv8.elog(log_level, `v_group_by: ${v_group_by}`);
+    if (p_group_by.length > 0) {
+      plv8.elog(log_level, v_group_by_q);
+      var v_group_by = plv8.execute(v_group_by_q);
+      plv8.elog(log_level, `v_group_by: ${v_group_by}`);
 
-    v_group_by.forEach(col => {
-      col.column_name = `"${col.column_name}"`
-    });
-    let v_group_by_cols = v_group_by.map(col => col.column_name);
+      v_group_by.forEach(col => {
+        col.column_name = `"${col.column_name}"`
+      });
+      var v_group_by_cols = v_group_by.map(col => col.column_name);
+    }
     let v_aggr_target_cols = p_aggr_target.map(col => `"${col}"`);
-
-    const create_temp_table_q = `CREATE TEMP TABLE tmda_ci_aggr_group(
-      id SERIAL PRIMARY KEY,
-      ${v_group_by.map(col => `${col.column_name} ${col.data_type}`).join(",\n")},
-      effective temporal_relationships.timeperiod DEFAULT '["-infinity", "infinity")'
-      )`;
+    const create_temp_table_q = 
+      p_group_by.length == 0 ? 
+        `CREATE TEMP TABLE tmda_ci_aggr_group(
+        id SERIAL PRIMARY KEY,
+        effective temporal_relationships.timeperiod DEFAULT '["-infinity", "infinity")'
+        )`
+        : 
+        `CREATE TEMP TABLE tmda_ci_aggr_group(
+        id SERIAL PRIMARY KEY,
+        ${v_group_by.map(col => `${col.column_name} ${col.data_type}`).join(",\n")},
+        effective temporal_relationships.timeperiod DEFAULT '["-infinity", "infinity")'
+        )`;
     plv8.elog(log_level, create_temp_table_q);
     plv8.execute(create_temp_table_q);
-    plv8.execute(`CREATE INDEX lookup_tmda ON tmda_ci_aggr_group (${v_group_by_cols.join(', ')})`);
-    
-    const gt_insert_q = `WITH rows AS (
+    if (p_group_by.length > 0) {
+      plv8.execute(`CREATE INDEX lookup_tmda ON tmda_ci_aggr_group (${v_group_by_cols.join(', ')})`);
+    }
+    const gt_insert_q = 
+    p_group_by.length == 0 ? 
+    `WITH rows AS (
+      INSERT INTO tmda_ci_aggr_group(id) VALUES (1)
+      RETURNING 1
+    ) SELECT count(*) AS rownum FROM rows`
+    : 
+    `WITH rows AS (
       INSERT INTO tmda_ci_aggr_group(${v_group_by_cols.join(', ')})
     (
       SELECT DISTINCT
@@ -64,11 +80,11 @@ function tmda_ci_c(p_schema, p_table, p_group_by, p_aggr_funcs, p_aggr_target, p
     let group_table_count = plv8.execute(gt_insert_q)[0].rownum;
     plv8.elog(log_level, `gt_insert_q: ${gt_insert_q} gt_rowcount: ${group_table_count}`);
 
-    const debug_gt = plv8.execute(`SELECT * FROM tmda_ci_aggr_group`);
-    for (let i = 0; i < debug_gt.length; i++) {
-      const g = debug_gt[i];
-      plv8.elog(log_level, `g[${i}]: ${JSON.stringify(g)}`);
-    }
+    // const debug_gt = plv8.execute(`SELECT * FROM tmda_ci_aggr_group`);
+    // for (let i = 0; i < debug_gt.length; i++) {
+    //   const g = debug_gt[i];
+    //   plv8.elog(log_level, `g[${i}]: ${JSON.stringify(g)}`);
+    // }
 
     plv8.execute('ANALYZE tmda_ci_aggr_group');
 
@@ -87,19 +103,32 @@ function tmda_ci_c(p_schema, p_table, p_group_by, p_aggr_funcs, p_aggr_target, p
     for (let i = 0; i < group_table_count; i++)
       avltrees.push(new AVLTree(tmdaDateComparator, true));
 
-    const plan = plv8.prepare(`SELECT 
-    ${v_group_by_cols.join(", ")},
-    ${v_aggr_target_cols.join(", ")},
-    LOWER(effective) AS effective_start, UPPER(effective) AS effective_end
-    FROM ${`"${p_schema}"."${p_table}"`} WHERE now() <@ asserted
-    ORDER BY LOWER(effective)`);
+    const plan_q =
+      p_group_by.length == 0 ?
+      `SELECT
+      ${v_aggr_target_cols.join(", ")},
+      LOWER(effective) AS effective_start, UPPER(effective) AS effective_end
+      FROM ${`"${p_schema}"."${p_table}"`} WHERE now() <@ asserted
+      ORDER BY LOWER(effective)`
+      :
+      `SELECT 
+      ${v_group_by_cols.join(", ")},
+      ${v_aggr_target_cols.join(", ")},
+      LOWER(effective) AS effective_start, UPPER(effective) AS effective_end
+      FROM ${`"${p_schema}"."${p_table}"`} WHERE now() <@ asserted
+      ORDER BY LOWER(effective)`;
+    const plan = plv8.prepare(plan_q);
     const cursor = plan.cursor();
 
     let rows = cursor.fetch(5);
     while (rows) { // foreach tuple r ∈ r in chronological order
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
-        const gt_lookup_q = `SELECT *, LOWER(effective) AS tstart, UPPER(effective) AS tend FROM tmda_ci_aggr_group WHERE
+        const gt_lookup_q = 
+        p_group_by.length == 0 ? 
+        `SELECT *, LOWER(effective) AS tstart, UPPER(effective) AS tend FROM tmda_ci_aggr_group`
+        :
+        `SELECT *, LOWER(effective) AS tstart, UPPER(effective) AS tend FROM tmda_ci_aggr_group WHERE
         ${v_group_by_cols.map(col => `${col}='${row[col.slice(1, -1)]}'`).join(",\n")}`;
         plv8.elog(log_level, gt_lookup_q);
         const gt_lookup = plv8.execute(gt_lookup_q);
