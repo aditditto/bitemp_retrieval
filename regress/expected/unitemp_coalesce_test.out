@@ -158,19 +158,26 @@ AS (emp_name text,
  Ron      | Ship | ["2010-10-10 00:00:00-07",infinity)
 (4 rows)
 
-SELECT * FROM v8_select_test('dsadsa', '1 hour'::interval, '{}');
+SELECT * FROM v8_select_test('dsadsa', '0.5 year'::interval, '{}');
 INFO:  NaN
 INFO:  NaN
 INFO:  false
 INFO:  false
 INFO:  [-infinity,infinity]
 INFO:  string
-INFO:  3600
+INFO:  15552000
+INFO:  @ 6 mons
 INFO:  string
 INFO:  0
  v8_select_test 
 ----------------
  
+(1 row)
+
+SELECT MAX(UPPER(effective)), date_trunc('years', MAX(UPPER(effective))) FROM employee WHERE UPPER(effective) != 'infinity' AND now() <@ asserted;
+          max           |       date_trunc       
+------------------------+------------------------
+ 2010-10-15 00:00:00-07 | 2010-01-01 00:00:00-08
 (1 row)
 
 DROP TABLE employee;

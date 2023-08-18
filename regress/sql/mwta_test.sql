@@ -15,7 +15,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     'public.checkout',
     $$custid, tapenum, cost$$,
     $$'C101', 'T1234', 4$$,
-    temporal_relationships.timeperiod('1970-01-01'::timestamptz, '1970-01-04'::timestamptz), --effective
+    temporal_relationships.timeperiod('2020-06-01'::timestamptz, '2020-06-04'::timestamptz), --effective
     temporal_relationships.timeperiod(now(), 'infinity') --asserted
 );
 
@@ -23,7 +23,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     'public.checkout',
     $$custid, tapenum, cost$$,
     $$'C102', 'T1245', 2$$,
-    temporal_relationships.timeperiod('1970-01-03'::timestamptz, '1970-01-06'::timestamptz), --effective
+    temporal_relationships.timeperiod('2020-06-03'::timestamptz, '2020-06-06'::timestamptz), --effective
     temporal_relationships.timeperiod(now(), 'infinity') --asserted
 );
 
@@ -31,7 +31,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     'public.checkout',
     $$custid, tapenum, cost$$,
     $$'C102', 'T1234', 4$$,
-    temporal_relationships.timeperiod('1970-01-07'::timestamptz, '1970-01-11'::timestamptz), --effective
+    temporal_relationships.timeperiod('2020-06-07'::timestamptz, '2020-06-11'::timestamptz), --effective
     temporal_relationships.timeperiod(now(), 'infinity') --asserted
 );
 
@@ -39,7 +39,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     'public.checkout',
     $$custid, tapenum, cost$$,
     $$'C102', 'T1245', 2$$,
-    temporal_relationships.timeperiod('1970-01-17'::timestamptz, '1970-01-19'::timestamptz), --effective
+    temporal_relationships.timeperiod('2020-06-17'::timestamptz, '2020-06-19'::timestamptz), --effective
     temporal_relationships.timeperiod(now(), 'infinity') --asserted
 );
 
@@ -47,7 +47,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     'public.checkout',
     $$custid, tapenum, cost$$,
     $$'C102', 'T1245', 2$$,
-    temporal_relationships.timeperiod('1970-01-19'::timestamptz, '1970-01-21'::timestamptz), --effective
+    temporal_relationships.timeperiod('2020-06-19'::timestamptz, '2020-06-21'::timestamptz), --effective
     temporal_relationships.timeperiod(now(), 'infinity') --asserted
 );
 
@@ -77,5 +77,18 @@ SELECT * FROM mwta_now(
     count numeric,
     effective tstzrange
 ) ORDER BY lower(effective);
+
+SELECT * FROM tmda_fi_now(
+    'public',
+    'checkout',
+    '{}',
+    ARRAY['count'],
+    ARRAY['custid'],
+    ARRAY['count'],
+    '1 week'::interval
+) AS (
+    count numeric,
+    effective tstzrange
+);
 
 DROP TABLE checkout;

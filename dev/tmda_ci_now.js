@@ -129,7 +129,7 @@ function tmda_ci_c(p_schema, p_table, p_group_by, p_aggr_funcs, p_aggr_target, p
         `SELECT *, LOWER(effective) AS tstart, UPPER(effective) AS tend FROM tmda_ci_aggr_group`
         :
         `SELECT *, LOWER(effective) AS tstart, UPPER(effective) AS tend FROM tmda_ci_aggr_group WHERE
-        ${v_group_by_cols.map(col => `${col}='${row[col.slice(1, -1)]}'`).join(",\n")}`;
+        ${v_group_by_cols.map(col => `${col}='${row[col.slice(1, -1)]}'`).join(" AND ")}`;
         plv8.elog(log_level, gt_lookup_q);
         const gt_lookup = plv8.execute(gt_lookup_q);
 
@@ -148,12 +148,10 @@ function tmda_ci_c(p_schema, p_table, p_group_by, p_aggr_funcs, p_aggr_target, p
 
                 let aggrResults = new Array(p_aggr_funcs.length).fill(0); // ResultTuple helpers
                 let counts = new Array(p_aggr_funcs.length).fill(0);
-                let count = 0;
                 tree.forEach(function(resultmember) { // ResultTuple(gt[i], F, C)
                   const nodeRows = resultmember.data;
                   for (let noderowCount = 0; noderowCount < nodeRows.length; noderowCount++) {
                     const noderow = nodeRows[noderowCount];
-                    count++;
                     
                     for (let k = 0; k < p_aggr_funcs.length; k++) {
                       // we need: aggr_func, rowname, property
@@ -179,7 +177,7 @@ function tmda_ci_c(p_schema, p_table, p_group_by, p_aggr_funcs, p_aggr_target, p
                         } else if (aggr_func == "sum") {
                           aggrResults[k] += rowval;
                         } else if (aggr_func == "max") {
-                          if (count === 1) { // First row
+                          if (counts[k] === 1) { // First row
                             aggrResults[k] = rowval;
                           } else {
                             if (rowval > aggrResults[k]) {
@@ -187,7 +185,7 @@ function tmda_ci_c(p_schema, p_table, p_group_by, p_aggr_funcs, p_aggr_target, p
                             }
                           }
                         } else if (aggr_func == "min") {
-                          if (count === 1) {
+                          if (counts[k] === 1) {
                             aggrResults[k] = rowval;
                           } else {
                             if (rowval < aggrResults[k]) {
@@ -285,13 +283,11 @@ function tmda_ci_c(p_schema, p_table, p_group_by, p_aggr_funcs, p_aggr_target, p
 
           let aggrResults = new Array(p_aggr_funcs.length).fill(0); // ResultTuple helpers
           let counts = new Array(p_aggr_funcs.length).fill(0);
-          let count = 0;
           tree.forEach(function(resultmember) { // ResultTuple(gt[i], F, C)
             const nodeRows = resultmember.data;
 
             for (let noderowCount = 0; noderowCount < nodeRows.length; noderowCount++) {
               const noderow = nodeRows[noderowCount];
-              count++;
               
               for (let k = 0; k < p_aggr_funcs.length; k++) {
                 // we need: aggr_func, rowname, property
@@ -317,7 +313,7 @@ function tmda_ci_c(p_schema, p_table, p_group_by, p_aggr_funcs, p_aggr_target, p
                   } else if (aggr_func == "sum") {
                     aggrResults[k] += rowval;
                   } else if (aggr_func == "max") {
-                    if (count === 1) { // First row
+                    if (counts[k] === 1) { // First row
                       aggrResults[k] = rowval;
                     } else {
                       if (rowval > aggrResults[k]) {
@@ -325,7 +321,7 @@ function tmda_ci_c(p_schema, p_table, p_group_by, p_aggr_funcs, p_aggr_target, p
                       }
                     }
                   } else if (aggr_func == "min") {
-                    if (count === 1) {
+                    if (counts[k] === 1) {
                       aggrResults[k] = rowval;
                     } else {
                       if (rowval < aggrResults[k]) {

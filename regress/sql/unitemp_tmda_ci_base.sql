@@ -199,11 +199,12 @@ SELECT n, cid, d, p, h, s, effective FROM empl WHERE now() <@ asserted ORDER BY 
 SELECT * FROM tmda_ci_now(
     'public',
     'empl',
-    ARRAY['d'],
+    ARRAY['d', 'n'],
     ARRAY['sum', 'max'],
     ARRAY['h', 's'],
     ARRAY['sum_h', 'max_s']
 ) AS (
+    n text,
     d text,
     sum_h numeric,
     max_s numeric,
