@@ -130,7 +130,7 @@ function tmda_fi(p_schema, p_table, p_group_by, p_aggr_funcs, p_aggr_target, p_a
       ${v_aggr_target_cols.join(", ")},
       LOWER(effective) AS effective_start, UPPER(effective) AS effective_end
       FROM ${`"${p_schema}"."${p_table}"`} WHERE now() <@ asserted AND effective && '${gtrow.effective}' AND
-      ${v_group_by_cols.map(col => `${col}='${row[col.slice(1, -1)]}'`).join(" AND ")}`;
+      ${v_group_by_cols.map(col => `${col}='${gtrow[col.slice(1, -1)]}'`).join(" AND ")}`;
       const targetplan = plv8.prepare(targetplan_q);
       const targetcursor = targetplan.cursor();
       

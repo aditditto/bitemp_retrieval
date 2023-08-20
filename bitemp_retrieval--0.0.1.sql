@@ -110,6 +110,20 @@ $BODY$
 LANGUAGE plpgsql;
 
 CREATE OR REPLACE
+FUNCTION get_interval_overlap(
+    a temporal_relationships.timeperiod,
+    b temporal_relationships.timeperiod
+    ) 
+RETURNS temporal_relationships.timeperiod
+AS
+$BODY$
+BEGIN
+  RETURN a * b;
+END;
+$BODY$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE
 FUNCTION unitemp_coalesce_select(
     p_query TEXT,
     p_list_of_fields TEXT[],
@@ -1308,7 +1322,7 @@ $$
       ${v_aggr_target_cols.join(", ")},
       LOWER(effective) AS effective_start, UPPER(effective) AS effective_end
       FROM ${`"${p_schema}"."${p_table}"`} WHERE now() <@ asserted AND effective && '${gtrow.effective}' AND
-      ${v_group_by_cols.map(col => `${col}='${row[col.slice(1, -1)]}'`).join(" AND ")}`;
+      ${v_group_by_cols.map(col => `${col}='${gtrow[col.slice(1, -1)]}'`).join(" AND ")}`;
       const targetplan = plv8.prepare(targetplan_q);
       const targetcursor = targetplan.cursor();
       
