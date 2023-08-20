@@ -94,63 +94,15 @@ SELECT * FROM ita_now(
     'public',
     'empl',
     ARRAY['d'],
-    ARRAY['avg'],
-    ARRAY['h'],
-    ARRAY['avg_h']
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    ARRAY['h', 'h', 'h', 'h', 'h'],
+    ARRAY['avg_h', 'sum_h', 'max_h', 'min_h', 'count_h']
 ) AS (
     d text,
     avg_h numeric,
-    effective tstzrange
-) ORDER BY d DESC, lower(effective);
-
-SELECT * FROM ita_now(
-    'public',
-    'empl',
-    ARRAY['d'],
-    ARRAY['sum'],
-    ARRAY['h'],
-    ARRAY['sum_h']
-) AS (
-    d text,
     sum_h numeric,
-    effective tstzrange
-) ORDER BY d DESC, lower(effective);
-
-SELECT * FROM ita_now(
-    'public',
-    'empl',
-    ARRAY['d'],
-    ARRAY['max'],
-    ARRAY['h'],
-    ARRAY['max_h']
-) AS (
-    d text,
     max_h numeric,
-    effective tstzrange
-) ORDER BY d DESC, lower(effective);
-
-SELECT * FROM ita_now(
-    'public',
-    'empl',
-    ARRAY['d'],
-    ARRAY['min'],
-    ARRAY['h'],
-    ARRAY['min_h']
-) AS (
-    d text,
     min_h numeric,
-    effective tstzrange
-) ORDER BY d DESC, lower(effective);
-
-SELECT * FROM ita_now(
-    'public',
-    'empl',
-    ARRAY['d'],
-    ARRAY['count'],
-    ARRAY['h'],
-    ARRAY['count_h']
-) AS (
-    d text,
     count_h numeric,
     effective tstzrange
 ) ORDER BY d DESC, lower(effective);
@@ -159,68 +111,16 @@ SELECT * FROM mwta_now(
     'public',
     'empl',
     ARRAY['d'],
-    ARRAY['avg'],
-    ARRAY['h'],
-    ARRAY['avg_h'],
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    ARRAY['h', 'h', 'h', 'h', 'h'],
+    ARRAY['avg_h', 'sum_h', 'max_h', 'min_h', 'count_h'],
     '3 days'::interval
 ) AS (
     d text,
     avg_h numeric,
-    effective tstzrange
-) ORDER BY d DESC, lower(effective);
-
-SELECT * FROM mwta_now(
-    'public',
-    'empl',
-    ARRAY['d'],
-    ARRAY['sum'],
-    ARRAY['h'],
-    ARRAY['sum_h'],
-    '3 days'::interval
-) AS (
-    d text,
     sum_h numeric,
-    effective tstzrange
-) ORDER BY d DESC, lower(effective);
-
-SELECT * FROM mwta_now(
-    'public',
-    'empl',
-    ARRAY['d'],
-    ARRAY['max'],
-    ARRAY['h'],
-    ARRAY['max_h'],
-    '3 days'::interval
-) AS (
-    d text,
     max_h numeric,
-    effective tstzrange
-) ORDER BY d DESC, lower(effective);
-
-SELECT * FROM mwta_now(
-    'public',
-    'empl',
-    ARRAY['d'],
-    ARRAY['min'],
-    ARRAY['h'],
-    ARRAY['min_h'],
-    '3 days'::interval
-) AS (
-    d text,
     min_h numeric,
-    effective tstzrange
-) ORDER BY d DESC, lower(effective);
-
-SELECT * FROM mwta_now(
-    'public',
-    'empl',
-    ARRAY['d'],
-    ARRAY['count'],
-    ARRAY['h'],
-    ARRAY['count_h'],
-    '3 days'::interval
-) AS (
-    d text,
     count_h numeric,
     effective tstzrange
 ) ORDER BY d DESC, lower(effective);
@@ -230,68 +130,16 @@ SELECT * FROM sta_now(
     'public',
     'empl',
     ARRAY['d'],
-    ARRAY['avg'],
-    ARRAY['h'],
-    ARRAY['avg_h'],
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    ARRAY['h', 'h', 'h', 'h', 'h'],
+    ARRAY['avg_h', 'sum_h', 'max_h', 'min_h', 'count_h'],
     '12 days'::interval
 ) AS (
     d text,
     avg_h numeric,
-    effective tstzrange
-) ORDER BY d DESC, lower(effective);
-
-SELECT * FROM sta_now(
-    'public',
-    'empl',
-    ARRAY['d'],
-    ARRAY['sum'],
-    ARRAY['h'],
-    ARRAY['sum_h'],
-    '12 days'::interval
-) AS (
-    d text,
     sum_h numeric,
-    effective tstzrange
-) ORDER BY d DESC, lower(effective);
-
-SELECT * FROM sta_now(
-    'public',
-    'empl',
-    ARRAY['d'],
-    ARRAY['max'],
-    ARRAY['h'],
-    ARRAY['max_h'],
-    '12 days'::interval
-) AS (
-    d text,
     max_h numeric,
-    effective tstzrange
-) ORDER BY d DESC, lower(effective);
-
-SELECT * FROM sta_now(
-    'public',
-    'empl',
-    ARRAY['d'],
-    ARRAY['min'],
-    ARRAY['h'],
-    ARRAY['min_h'],
-    '12 days'::interval
-) AS (
-    d text,
     min_h numeric,
-    effective tstzrange
-) ORDER BY d DESC, lower(effective);
-
-SELECT * FROM sta_now(
-    'public',
-    'empl',
-    ARRAY['d'],
-    ARRAY['count'],
-    ARRAY['h'],
-    ARRAY['count_h'],
-    '12 days'::interval
-) AS (
-    d text,
     count_h numeric,
     effective tstzrange
 ) ORDER BY d DESC, lower(effective);
@@ -305,63 +153,15 @@ SELECT * FROM ita_now(
     'public',
     'empl',
     ARRAY['d'],
-    ARRAY['avg'],
-    ARRAY['h'],
-    ARRAY['avg_h']
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    ARRAY['h', 'h', 'h', 'h', 'h'],
+    ARRAY['avg_h', 'sum_h', 'max_h', 'min_h', 'count_h']
 ) AS (
     d text,
     avg_h numeric,
-    effective tstzrange
-) ORDER BY d DESC, lower(effective);
-
-SELECT * FROM ita_now(
-    'public',
-    'empl',
-    ARRAY['d'],
-    ARRAY['sum'],
-    ARRAY['h'],
-    ARRAY['sum_h']
-) AS (
-    d text,
     sum_h numeric,
-    effective tstzrange
-) ORDER BY d DESC, lower(effective);
-
-SELECT * FROM ita_now(
-    'public',
-    'empl',
-    ARRAY['d'],
-    ARRAY['max'],
-    ARRAY['h'],
-    ARRAY['max_h']
-) AS (
-    d text,
     max_h numeric,
-    effective tstzrange
-) ORDER BY d DESC, lower(effective);
-
-SELECT * FROM ita_now(
-    'public',
-    'empl',
-    ARRAY['d'],
-    ARRAY['min'],
-    ARRAY['h'],
-    ARRAY['min_h']
-) AS (
-    d text,
     min_h numeric,
-    effective tstzrange
-) ORDER BY d DESC, lower(effective);
-
-SELECT * FROM ita_now(
-    'public',
-    'empl',
-    ARRAY['d'],
-    ARRAY['count'],
-    ARRAY['h'],
-    ARRAY['count_h']
-) AS (
-    d text,
     count_h numeric,
     effective tstzrange
 ) ORDER BY d DESC, lower(effective);
@@ -371,68 +171,16 @@ SELECT * FROM sta_now(
     'public',
     'empl',
     ARRAY['d'],
-    ARRAY['avg'],
-    ARRAY['h'],
-    ARRAY['avg_h'],
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    ARRAY['h', 'h', 'h', 'h', 'h'],
+    ARRAY['avg_h', 'sum_h', 'max_h', 'min_h', 'count_h'],
     '12 days'::interval
 ) AS (
     d text,
     avg_h numeric,
-    effective tstzrange
-) ORDER BY d DESC, lower(effective);
-
-SELECT * FROM sta_now(
-    'public',
-    'empl',
-    ARRAY['d'],
-    ARRAY['sum'],
-    ARRAY['h'],
-    ARRAY['sum_h'],
-    '12 days'::interval
-) AS (
-    d text,
     sum_h numeric,
-    effective tstzrange
-) ORDER BY d DESC, lower(effective);
-
-SELECT * FROM sta_now(
-    'public',
-    'empl',
-    ARRAY['d'],
-    ARRAY['max'],
-    ARRAY['h'],
-    ARRAY['max_h'],
-    '12 days'::interval
-) AS (
-    d text,
     max_h numeric,
-    effective tstzrange
-) ORDER BY d DESC, lower(effective);
-
-SELECT * FROM sta_now(
-    'public',
-    'empl',
-    ARRAY['d'],
-    ARRAY['min'],
-    ARRAY['h'],
-    ARRAY['min_h'],
-    '12 days'::interval
-) AS (
-    d text,
     min_h numeric,
-    effective tstzrange
-) ORDER BY d DESC, lower(effective);
-
-SELECT * FROM sta_now(
-    'public',
-    'empl',
-    ARRAY['d'],
-    ARRAY['count'],
-    ARRAY['h'],
-    ARRAY['count_h'],
-    '12 days'::interval
-) AS (
-    d text,
     count_h numeric,
     effective tstzrange
 ) ORDER BY d DESC, lower(effective);
@@ -446,63 +194,15 @@ SELECT * FROM ita_now(
     'public',
     'empl',
     ARRAY['d'],
-    ARRAY['avg'],
-    ARRAY['h'],
-    ARRAY['avg_h']
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    ARRAY['h', 'h', 'h', 'h', 'h'],
+    ARRAY['avg_h', 'sum_h', 'max_h', 'min_h', 'count_h']
 ) AS (
     d text,
     avg_h numeric,
-    effective tstzrange
-) ORDER BY d DESC, lower(effective);
-
-SELECT * FROM ita_now(
-    'public',
-    'empl',
-    ARRAY['d'],
-    ARRAY['sum'],
-    ARRAY['h'],
-    ARRAY['sum_h']
-) AS (
-    d text,
     sum_h numeric,
-    effective tstzrange
-) ORDER BY d DESC, lower(effective);
-
-SELECT * FROM ita_now(
-    'public',
-    'empl',
-    ARRAY['d'],
-    ARRAY['max'],
-    ARRAY['h'],
-    ARRAY['max_h']
-) AS (
-    d text,
     max_h numeric,
-    effective tstzrange
-) ORDER BY d DESC, lower(effective);
-
-SELECT * FROM ita_now(
-    'public',
-    'empl',
-    ARRAY['d'],
-    ARRAY['min'],
-    ARRAY['h'],
-    ARRAY['min_h']
-) AS (
-    d text,
     min_h numeric,
-    effective tstzrange
-) ORDER BY d DESC, lower(effective);
-
-SELECT * FROM ita_now(
-    'public',
-    'empl',
-    ARRAY['d'],
-    ARRAY['count'],
-    ARRAY['h'],
-    ARRAY['count_h']
-) AS (
-    d text,
     count_h numeric,
     effective tstzrange
 ) ORDER BY d DESC, lower(effective);
@@ -512,68 +212,16 @@ SELECT * FROM sta_now(
     'public',
     'empl',
     ARRAY['d'],
-    ARRAY['avg'],
-    ARRAY['h'],
-    ARRAY['avg_h'],
+    ARRAY['avg', 'sum', 'max', 'min', 'count'],
+    ARRAY['h', 'h', 'h', 'h', 'h'],
+    ARRAY['avg_h', 'sum_h', 'max_h', 'min_h', 'count_h'],
     '12 days'::interval
 ) AS (
     d text,
     avg_h numeric,
-    effective tstzrange
-) ORDER BY d DESC, lower(effective);
-
-SELECT * FROM sta_now(
-    'public',
-    'empl',
-    ARRAY['d'],
-    ARRAY['sum'],
-    ARRAY['h'],
-    ARRAY['sum_h'],
-    '12 days'::interval
-) AS (
-    d text,
     sum_h numeric,
-    effective tstzrange
-) ORDER BY d DESC, lower(effective);
-
-SELECT * FROM sta_now(
-    'public',
-    'empl',
-    ARRAY['d'],
-    ARRAY['max'],
-    ARRAY['h'],
-    ARRAY['max_h'],
-    '12 days'::interval
-) AS (
-    d text,
     max_h numeric,
-    effective tstzrange
-) ORDER BY d DESC, lower(effective);
-
-SELECT * FROM sta_now(
-    'public',
-    'empl',
-    ARRAY['d'],
-    ARRAY['min'],
-    ARRAY['h'],
-    ARRAY['min_h'],
-    '12 days'::interval
-) AS (
-    d text,
     min_h numeric,
-    effective tstzrange
-) ORDER BY d DESC, lower(effective);
-
-SELECT * FROM sta_now(
-    'public',
-    'empl',
-    ARRAY['d'],
-    ARRAY['count'],
-    ARRAY['h'],
-    ARRAY['count_h'],
-    '12 days'::interval
-) AS (
-    d text,
     count_h numeric,
     effective tstzrange
 ) ORDER BY d DESC, lower(effective);
