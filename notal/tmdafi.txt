@@ -1,0 +1,16 @@
+Algorithm: TMDA-FI
+Input: relasi R, string[] group_by, aggregateFunction[] F, attributeProperty[] C, interval intv
+Output:
+Deklarasi:
+Metode:
+gt ← empty group table with columns group_by, T, τ
+Initialize gt distinct values from group_by in r cross join with intervals of length intv
+Create index for gt on attributes group_by, intv
+z ← ∅
+
+foreach tuple g ∈ gt do
+  foreach r ∈ LOOKUP(r, g) do
+    z ← z ∪ ResultTuple(gt[i], F, C)
+    foreach fj ∈ F do gt[i].fAij ← gt[i].fAij ⊕ r′.Aij
+
+return gt

@@ -147,7 +147,7 @@ SELECT n, cid, d, p, h, s, effective FROM empl WHERE now() <@ asserted;
  Tom | 153 | AI | P1 |  900 | 1800 | ["2004-01-01 00:00:00+07","2004-07-01 00:00:00+07")
 (8 rows)
 
-SELECT * FROM tmda_ci_now(
+SELECT * FROM ita_now(
     'public',
     'empl',
     ARRAY['d'],
@@ -307,7 +307,7 @@ SELECT n, cid, d, p, h, s, effective FROM empl WHERE now() <@ asserted ORDER BY 
  Jan | 163 | DB | P1 |  600 | 1500 | ["1970-01-19 00:00:00+07","1970-01-22 00:00:00+07")
 (8 rows)
 
-SELECT * FROM tmda_ci_now(
+SELECT * FROM ita_now(
     'public',
     'empl',
     ARRAY['d', 'n'],
@@ -334,7 +334,7 @@ SELECT * FROM tmda_ci_now(
  Tom | AI |   900 |  1800 | ["1970-01-13 00:00:00+07","1970-01-19 00:00:00+07")
 (9 rows)
 
-SELECT * FROM tmda_ci_now(
+SELECT * FROM ita_now(
     'public',
     'empl',
     ARRAY['cid'],

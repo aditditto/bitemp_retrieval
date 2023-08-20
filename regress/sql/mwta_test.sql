@@ -53,7 +53,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
 
 SELECT custid, tapenum, cost, effective FROM checkout;
 
-SELECT * FROM tmda_ci_now(
+SELECT * FROM ita_now(
     'public',
     'checkout',
     '{}',
@@ -78,7 +78,7 @@ SELECT * FROM mwta_now(
     effective tstzrange
 ) ORDER BY lower(effective);
 
-SELECT * FROM tmda_fi_now(
+SELECT * FROM sta_now(
     'public',
     'checkout',
     '{}',

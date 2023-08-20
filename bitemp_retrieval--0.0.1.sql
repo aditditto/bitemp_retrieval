@@ -370,7 +370,7 @@ $$
 $$
 LANGUAGE plv8;
 
-CREATE FUNCTION tmda_ci_now(
+CREATE FUNCTION ita_now(
   p_schema TEXT,
   p_table TEXT,
   p_group_by TEXT[],
@@ -1169,7 +1169,7 @@ $$
 $$
 LANGUAGE plv8;
 
-CREATE FUNCTION tmda_fi_now(
+CREATE FUNCTION sta_now(
   p_schema TEXT,
   p_table TEXT,
   p_group_by TEXT[],

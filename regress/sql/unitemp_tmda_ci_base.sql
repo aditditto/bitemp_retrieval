@@ -93,7 +93,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
 
 SELECT n, cid, d, p, h, s, effective FROM empl WHERE now() <@ asserted;
 
-SELECT * FROM tmda_ci_now(
+SELECT * FROM ita_now(
     'public',
     'empl',
     ARRAY['d'],
@@ -196,7 +196,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
 
 SELECT n, cid, d, p, h, s, effective FROM empl WHERE now() <@ asserted ORDER BY LOWER(effective);
 
-SELECT * FROM tmda_ci_now(
+SELECT * FROM ita_now(
     'public',
     'empl',
     ARRAY['d', 'n'],
@@ -211,7 +211,7 @@ SELECT * FROM tmda_ci_now(
     effective tstzrange
 ) ORDER BY d DESC, lower(effective);
 
-SELECT * FROM tmda_ci_now(
+SELECT * FROM ita_now(
     'public',
     'empl',
     ARRAY['cid'],
