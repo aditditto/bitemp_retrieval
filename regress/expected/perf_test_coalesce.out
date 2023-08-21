@@ -1,0 +1,289 @@
+SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
+    'public',
+    'emp30k',
+    $$id integer,
+      salary numeric
+    $$,
+'id');
+ ll_create_bitemporal_table 
+----------------------------
+ t
+(1 row)
+
+INSERT INTO public.emp30k(id, salary, effective, asserted)
+  SELECT id, salary, effective, tstzrange(now(), 'infinity', '[)') AS asserted FROM
+  (SELECT generate_series(1, 300, 1) AS id, generate_series(501, 800, 1) AS salary) AS attrs
+  CROSS JOIN (
+    SELECT tstzrange(t.d, (t.d + '1 day'::interval), '[)') AS effective FROM
+      generate_series('1950-01-01'::timestamptz, '1950-04-10'::timestamptz, '1 day') AS t(d)
+      ) eff;
+SELECT COUNT(*) FROM public.emp30k;
+ count 
+-------
+ 30000
+(1 row)
+
+EXPLAIN ANALYZE SELECT AVG(salary), SUM(salary), MAX(salary), MIN(salary), COUNT(salary)
+  FROM public.emp30k;
+                                                   QUERY PLAN                                                    
+-----------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=801.37..801.38 rows=1 width=136) (actual time=9.850..9.851 rows=1 loops=1)
+   ->  Seq Scan on emp30k  (cost=0.00..586.18 rows=21518 width=32) (actual time=0.007..2.689 rows=30000 loops=1)
+ Planning Time: 0.154 ms
+ Execution Time: 9.878 ms
+(4 rows)
+
+EXPLAIN ANALYZE SELECT * FROM public.emp30k WHERE now() <@ asserted;
+                                                               QUERY PLAN                                                                
+-----------------------------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on emp30k  (cost=13.11..250.52 rows=108 width=112) (actual time=3.898..11.148 rows=30000 loops=1)
+   Filter: (now() <@ (asserted)::tstzrange)
+   Heap Blocks: exact=371
+   ->  Bitmap Index Scan on emp30k_id_assert_eff_excl  (cost=0.00..13.09 rows=108 width=0) (actual time=3.851..3.851 rows=30000 loops=1)
+         Index Cond: ((asserted)::tstzrange @> now())
+ Planning Time: 0.062 ms
+ Execution Time: 12.203 ms
+(7 rows)
+
+EXPLAIN ANALYZE SELECT * FROM unitemp_coalesce_table_effective(
+    'public', 'emp30k', ARRAY['id', 'salary']
+) AS (id numeric, salary numeric, effective tstzrange);
+                                                                 QUERY PLAN                                                                 
+--------------------------------------------------------------------------------------------------------------------------------------------
+ Function Scan on unitemp_coalesce_table_effective  (cost=0.25..10.25 rows=1000 width=96) (actual time=1401.140..1401.153 rows=300 loops=1)
+ Planning Time: 0.027 ms
+ Execution Time: 1406.692 ms
+(3 rows)
+
+-- 60k
+SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
+    'public',
+    'emp60k',
+    $$id integer,
+      salary numeric
+    $$,
+'id');
+ ll_create_bitemporal_table 
+----------------------------
+ t
+(1 row)
+
+INSERT INTO public.emp60k(id, salary, effective, asserted)
+  SELECT id, salary, effective, tstzrange(now(), 'infinity', '[)') AS asserted FROM
+  (SELECT generate_series(1, 300, 1) AS id, generate_series(501, 800, 1) AS salary) AS attrs
+  CROSS JOIN (
+    SELECT tstzrange(t.d, (t.d + '1 day'::interval), '[)') AS effective FROM
+      generate_series('1950-01-01'::timestamptz, '1950-07-19'::timestamptz, '1 day') AS t(d)
+      ) eff;
+SELECT COUNT(*) FROM public.emp60k;
+ count 
+-------
+ 60000
+(1 row)
+
+EXPLAIN ANALYZE SELECT AVG(salary), SUM(salary), MAX(salary), MIN(salary), COUNT(salary)
+  FROM public.emp60k;
+                                                    QUERY PLAN                                                    
+------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=1600.57..1600.58 rows=1 width=136) (actual time=19.613..19.614 rows=1 loops=1)
+   ->  Seq Scan on emp60k  (cost=0.00..1170.78 rows=42978 width=32) (actual time=0.010..5.621 rows=60000 loops=1)
+ Planning Time: 0.096 ms
+ Execution Time: 19.644 ms
+(4 rows)
+
+EXPLAIN ANALYZE SELECT * FROM public.emp60k WHERE now() <@ asserted;
+                                                               QUERY PLAN                                                                
+-----------------------------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on emp60k  (cost=21.95..493.09 rows=215 width=112) (actual time=8.929..20.220 rows=60000 loops=1)
+   Filter: (now() <@ (asserted)::tstzrange)
+   Heap Blocks: exact=741
+   ->  Bitmap Index Scan on emp60k_id_assert_eff_excl  (cost=0.00..21.89 rows=215 width=0) (actual time=8.838..8.839 rows=60000 loops=1)
+         Index Cond: ((asserted)::tstzrange @> now())
+ Planning Time: 0.063 ms
+ Execution Time: 21.887 ms
+(7 rows)
+
+EXPLAIN ANALYZE SELECT * FROM unitemp_coalesce_table_effective(
+    'public', 'emp60k', ARRAY['id', 'salary']
+) AS (id numeric, salary numeric, effective tstzrange);
+                                                                 QUERY PLAN                                                                 
+--------------------------------------------------------------------------------------------------------------------------------------------
+ Function Scan on unitemp_coalesce_table_effective  (cost=0.25..10.25 rows=1000 width=96) (actual time=2494.375..2494.388 rows=300 loops=1)
+ Planning Time: 0.035 ms
+ Execution Time: 2494.411 ms
+(3 rows)
+
+-- 90k
+SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
+    'public',
+    'emp90k',
+    $$id integer,
+      salary numeric
+    $$,
+'id');
+ ll_create_bitemporal_table 
+----------------------------
+ t
+(1 row)
+
+INSERT INTO public.emp90k(id, salary, effective, asserted)
+  SELECT id, salary, effective, tstzrange(now(), 'infinity', '[)') AS asserted FROM
+  (SELECT generate_series(1, 450, 1) AS id, generate_series(501, 950, 1) AS salary) AS attrs
+  CROSS JOIN (
+    SELECT tstzrange(t.d, (t.d + '1 day'::interval), '[)') AS effective FROM
+      generate_series('1950-01-01'::timestamptz, '1950-07-19'::timestamptz, '1 day') AS t(d)
+      ) eff;
+SELECT COUNT(*) FROM public.emp90k;
+ count 
+-------
+ 90000
+(1 row)
+
+EXPLAIN ANALYZE SELECT AVG(salary), SUM(salary), MAX(salary), MIN(salary), COUNT(salary)
+  FROM public.emp90k;
+                                                    QUERY PLAN                                                    
+------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=2401.93..2401.94 rows=1 width=136) (actual time=21.657..21.657 rows=1 loops=1)
+   ->  Seq Scan on emp90k  (cost=0.00..1756.96 rows=64496 width=32) (actual time=0.005..6.143 rows=90000 loops=1)
+ Planning Time: 0.066 ms
+ Execution Time: 21.674 ms
+(4 rows)
+
+EXPLAIN ANALYZE SELECT * FROM public.emp90k WHERE now() <@ asserted;
+                                                                QUERY PLAN                                                                 
+-------------------------------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on emp90k  (cost=30.78..737.58 rows=322 width=112) (actual time=10.683..25.750 rows=90000 loops=1)
+   Filter: (now() <@ (asserted)::tstzrange)
+   Heap Blocks: exact=1112
+   ->  Bitmap Index Scan on emp90k_id_assert_eff_excl  (cost=0.00..30.70 rows=322 width=0) (actual time=10.566..10.566 rows=90000 loops=1)
+         Index Cond: ((asserted)::tstzrange @> now())
+ Planning Time: 0.032 ms
+ Execution Time: 27.861 ms
+(7 rows)
+
+EXPLAIN ANALYZE SELECT * FROM unitemp_coalesce_table_effective(
+    'public', 'emp90k', ARRAY['id', 'salary']
+) AS (id numeric, salary numeric, effective tstzrange);
+                                                                 QUERY PLAN                                                                 
+--------------------------------------------------------------------------------------------------------------------------------------------
+ Function Scan on unitemp_coalesce_table_effective  (cost=0.25..10.25 rows=1000 width=96) (actual time=3271.506..3271.526 rows=450 loops=1)
+ Planning Time: 0.027 ms
+ Execution Time: 3271.549 ms
+(3 rows)
+
+-- 120k
+SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
+    'public',
+    'emp120k',
+    $$id integer,
+      salary numeric
+    $$,
+'id');
+ ll_create_bitemporal_table 
+----------------------------
+ t
+(1 row)
+
+INSERT INTO public.emp120k(id, salary, effective, asserted)
+  SELECT id, salary, effective, tstzrange(now(), 'infinity', '[)') AS asserted FROM
+  (SELECT generate_series(1, 600, 1) AS id, generate_series(501, 1100, 1) AS salary) AS attrs
+  CROSS JOIN (
+    SELECT tstzrange(t.d, (t.d + '1 day'::interval), '[)') AS effective FROM
+      generate_series('1950-01-01'::timestamptz, '1950-07-19'::timestamptz, '1 day') AS t(d)
+      ) eff;
+SELECT COUNT(*) FROM public.emp120k;
+ count  
+--------
+ 120000
+(1 row)
+
+EXPLAIN ANALYZE SELECT AVG(salary), SUM(salary), MAX(salary), MIN(salary), COUNT(salary)
+  FROM public.emp120k;
+                                                     QUERY PLAN                                                     
+--------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=3201.12..3201.14 rows=1 width=136) (actual time=26.881..26.881 rows=1 loops=1)
+   ->  Seq Scan on emp120k  (cost=0.00..2341.56 rows=85956 width=32) (actual time=0.004..7.726 rows=120000 loops=1)
+ Planning Time: 0.033 ms
+ Execution Time: 26.895 ms
+(4 rows)
+
+EXPLAIN ANALYZE SELECT * FROM public.emp120k WHERE now() <@ asserted;
+                                                                 QUERY PLAN                                                                  
+---------------------------------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on emp120k  (cost=39.62..981.89 rows=430 width=112) (actual time=14.706..35.152 rows=120000 loops=1)
+   Filter: (now() <@ (asserted)::tstzrange)
+   Heap Blocks: exact=1482
+   ->  Bitmap Index Scan on emp120k_id_assert_eff_excl  (cost=0.00..39.51 rows=430 width=0) (actual time=14.548..14.549 rows=120000 loops=1)
+         Index Cond: ((asserted)::tstzrange @> now())
+ Planning Time: 0.064 ms
+ Execution Time: 37.968 ms
+(7 rows)
+
+EXPLAIN ANALYZE SELECT * FROM unitemp_coalesce_table_effective(
+    'public', 'emp120k', ARRAY['id', 'salary']
+) AS (id numeric, salary numeric, effective tstzrange);
+                                                                 QUERY PLAN                                                                 
+--------------------------------------------------------------------------------------------------------------------------------------------
+ Function Scan on unitemp_coalesce_table_effective  (cost=0.25..10.25 rows=1000 width=96) (actual time=4201.162..4201.187 rows=600 loops=1)
+ Planning Time: 0.046 ms
+ Execution Time: 4207.739 ms
+(3 rows)
+
+-- 150k
+SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
+    'public',
+    'emp150k',
+    $$id integer,
+      salary numeric
+    $$,
+'id');
+ ll_create_bitemporal_table 
+----------------------------
+ t
+(1 row)
+
+INSERT INTO public.emp150k(id, salary, effective, asserted)
+  SELECT id, salary, effective, tstzrange(now(), 'infinity', '[)') AS asserted FROM
+  (SELECT generate_series(1, 600, 1) AS id, generate_series(501, 1100, 1) AS salary) AS attrs
+  CROSS JOIN (
+    SELECT tstzrange(t.d, (t.d + '1 day'::interval), '[)') AS effective FROM
+      generate_series('1950-01-01'::timestamptz, '1950-09-07'::timestamptz, '1 day') AS t(d)
+      ) eff;
+SELECT COUNT(*) FROM public.emp150k;
+ count  
+--------
+ 150000
+(1 row)
+
+EXPLAIN ANALYZE SELECT AVG(salary), SUM(salary), MAX(salary), MIN(salary), COUNT(salary)
+  FROM public.emp150k;
+                                                      QUERY PLAN                                                      
+----------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=4000.32..4000.34 rows=1 width=136) (actual time=35.292..35.293 rows=1 loops=1)
+   ->  Seq Scan on emp150k  (cost=0.00..2926.16 rows=107416 width=32) (actual time=0.004..10.142 rows=150000 loops=1)
+ Planning Time: 0.036 ms
+ Execution Time: 35.311 ms
+(4 rows)
+
+EXPLAIN ANALYZE SELECT * FROM public.emp150k WHERE now() <@ asserted;
+                                                                 QUERY PLAN                                                                  
+---------------------------------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on emp150k  (cost=52.44..1230.19 rows=537 width=112) (actual time=17.961..43.578 rows=150000 loops=1)
+   Filter: (now() <@ (asserted)::tstzrange)
+   Heap Blocks: exact=1852
+   ->  Bitmap Index Scan on emp150k_id_assert_eff_excl  (cost=0.00..52.31 rows=537 width=0) (actual time=17.755..17.755 rows=150000 loops=1)
+         Index Cond: ((asserted)::tstzrange @> now())
+ Planning Time: 0.059 ms
+ Execution Time: 47.195 ms
+(7 rows)
+
+EXPLAIN ANALYZE SELECT * FROM unitemp_coalesce_table_effective(
+    'public', 'emp150k', ARRAY['id', 'salary']
+) AS (id numeric, salary numeric, effective tstzrange);
+                                                                 QUERY PLAN                                                                 
+--------------------------------------------------------------------------------------------------------------------------------------------
+ Function Scan on unitemp_coalesce_table_effective  (cost=0.25..10.25 rows=1000 width=96) (actual time=5242.903..5242.928 rows=600 loops=1)
+ Planning Time: 0.025 ms
+ Execution Time: 5242.956 ms
+(3 rows)
+

@@ -391,3 +391,9 @@ EXPLAIN ANALYZE SELECT * FROM
     count numeric,
     effective tstzrange
   );
+
+  DROP TABLE emp30k;
+  DROP TABLE emp60k;
+  DROP TABLE emp90k;
+  DROP TABLE emp120k;
+  DROP TABLE emp150k;
