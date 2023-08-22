@@ -74,23 +74,26 @@ SELECT emp_id, emp_name, dept, effective FROM employee;
 
 SELECT emp_id, emp_name, dept, effective FROM employee WHERE now() <@ asserted ORDER BY emp_name, asserted;
 
-SELECT * FROM unitemp_coalesce_select('SELECT emp_name, dept, effective FROM employee WHERE now() <@ asserted'::text, 
+SELECT * FROM unitemp_coalesce_select(
+    'SELECT emp_name, dept, effective FROM employee WHERE now() <@ asserted'::text, 
     ARRAY['emp_name', 'dept'], 
     'effective'::text
     ) AS (emp_name text,
             dept text,
             effective tstzrange) ORDER BY emp_name, effective;
 
-SELECT * FROM unitemp_coalesce_select_effective('SELECT emp_name, dept, effective FROM employee WHERE now() <@ asserted'::text, 
+SELECT * FROM unitemp_coalesce_select_effective(
+    'SELECT emp_name, dept, effective FROM employee WHERE now() <@ asserted'::text, 
     ARRAY['emp_name', 'dept']
     ) AS (emp_name text,
             dept text,
             effective tstzrange) ORDER BY emp_name, effective;
 
-SELECT * FROM unitemp_coalesce_table_effective('public', 'employee', ARRAY['emp_name', 'dept'])
+SELECT * FROM unitemp_coalesce_table_effective(
+    'public', 'employee', ARRAY['emp_name', 'dept'])
 AS (emp_name text,
-            dept text,
-            effective tstzrange) ORDER BY emp_name, effective;
+        dept text,
+        effective tstzrange) ORDER BY emp_name, effective;
 
 SELECT * FROM v8_select_test('dsadsa', '0.5 year'::interval, '{}');
 

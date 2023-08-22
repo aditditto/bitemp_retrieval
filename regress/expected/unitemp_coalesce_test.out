@@ -120,7 +120,8 @@ SELECT emp_id, emp_name, dept, effective FROM employee WHERE now() <@ asserted O
       1 | Ron      | Ship | ["2010-10-15 00:00:00-07",infinity)
 (6 rows)
 
-SELECT * FROM unitemp_coalesce_select('SELECT emp_name, dept, effective FROM employee WHERE now() <@ asserted'::text, 
+SELECT * FROM unitemp_coalesce_select(
+    'SELECT emp_name, dept, effective FROM employee WHERE now() <@ asserted'::text, 
     ARRAY['emp_name', 'dept'], 
     'effective'::text
     ) AS (emp_name text,
@@ -134,7 +135,8 @@ SELECT * FROM unitemp_coalesce_select('SELECT emp_name, dept, effective FROM emp
  Ron      | Ship | ["2010-10-10 00:00:00-07",infinity)
 (4 rows)
 
-SELECT * FROM unitemp_coalesce_select_effective('SELECT emp_name, dept, effective FROM employee WHERE now() <@ asserted'::text, 
+SELECT * FROM unitemp_coalesce_select_effective(
+    'SELECT emp_name, dept, effective FROM employee WHERE now() <@ asserted'::text, 
     ARRAY['emp_name', 'dept']
     ) AS (emp_name text,
             dept text,
@@ -147,10 +149,11 @@ SELECT * FROM unitemp_coalesce_select_effective('SELECT emp_name, dept, effectiv
  Ron      | Ship | ["2010-10-10 00:00:00-07",infinity)
 (4 rows)
 
-SELECT * FROM unitemp_coalesce_table_effective('public', 'employee', ARRAY['emp_name', 'dept'])
+SELECT * FROM unitemp_coalesce_table_effective(
+    'public', 'employee', ARRAY['emp_name', 'dept'])
 AS (emp_name text,
-            dept text,
-            effective tstzrange) ORDER BY emp_name, effective;
+        dept text,
+        effective tstzrange) ORDER BY emp_name, effective;
  emp_name | dept |                      effective                      
 ----------+------+-----------------------------------------------------
  George   | Ship | ["2010-10-05 00:00:00-07","2010-10-09 00:00:00-07")
