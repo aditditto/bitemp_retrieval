@@ -1,5 +1,6 @@
 DROP EXTENSION bitemp_retrieval;
 CREATE EXTENSION bitemp_retrieval;
+SET DATESTYLE TO 'ISO';
 
 SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
     'public',

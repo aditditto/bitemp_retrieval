@@ -1,5 +1,6 @@
 DROP EXTENSION bitemp_retrieval;
 CREATE EXTENSION bitemp_retrieval;
+SET DATESTYLE TO 'ISO';
 SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
     'public',
     'employee',
@@ -95,28 +96,28 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_update(
 (1 row)
 
 SELECT emp_id, emp_name, dept, effective FROM employee;
- emp_id | emp_name | dept |                            effective                            
---------+----------+------+-----------------------------------------------------------------
-      1 | Ron      | Ship | ["Fri Oct 01 00:00:00 2010 PDT","Wed Oct 06 00:00:00 2010 PDT")
-      2 | George   | Ship | ["Tue Oct 05 00:00:00 2010 PDT","Sat Oct 09 00:00:00 2010 PDT")
-      1 | Ron      | Mail | ["Wed Oct 06 00:00:00 2010 PDT",infinity)
-      1 | Ron      | Mail | ["Wed Oct 06 00:00:00 2010 PDT","Fri Oct 08 00:00:00 2010 PDT")
-      1 | Ron      | Mail | ["Fri Oct 08 00:00:00 2010 PDT",infinity)
-      1 | Ron      | Mail | ["Fri Oct 08 00:00:00 2010 PDT","Sun Oct 10 00:00:00 2010 PDT")
-      1 | Ron      | Ship | ["Sun Oct 10 00:00:00 2010 PDT",infinity)
-      1 | Ron      | Ship | ["Sun Oct 10 00:00:00 2010 PDT","Fri Oct 15 00:00:00 2010 PDT")
-      1 | Ron      | Ship | ["Fri Oct 15 00:00:00 2010 PDT",infinity)
+ emp_id | emp_name | dept |                      effective                      
+--------+----------+------+-----------------------------------------------------
+      1 | Ron      | Ship | ["2010-10-01 00:00:00-07","2010-10-06 00:00:00-07")
+      2 | George   | Ship | ["2010-10-05 00:00:00-07","2010-10-09 00:00:00-07")
+      1 | Ron      | Mail | ["2010-10-06 00:00:00-07",infinity)
+      1 | Ron      | Mail | ["2010-10-06 00:00:00-07","2010-10-08 00:00:00-07")
+      1 | Ron      | Mail | ["2010-10-08 00:00:00-07",infinity)
+      1 | Ron      | Mail | ["2010-10-08 00:00:00-07","2010-10-10 00:00:00-07")
+      1 | Ron      | Ship | ["2010-10-10 00:00:00-07",infinity)
+      1 | Ron      | Ship | ["2010-10-10 00:00:00-07","2010-10-15 00:00:00-07")
+      1 | Ron      | Ship | ["2010-10-15 00:00:00-07",infinity)
 (9 rows)
 
 SELECT emp_id, emp_name, dept, effective FROM employee WHERE now() <@ asserted ORDER BY emp_name, asserted;
- emp_id | emp_name | dept |                            effective                            
---------+----------+------+-----------------------------------------------------------------
-      2 | George   | Ship | ["Tue Oct 05 00:00:00 2010 PDT","Sat Oct 09 00:00:00 2010 PDT")
-      1 | Ron      | Ship | ["Fri Oct 01 00:00:00 2010 PDT","Wed Oct 06 00:00:00 2010 PDT")
-      1 | Ron      | Mail | ["Wed Oct 06 00:00:00 2010 PDT","Fri Oct 08 00:00:00 2010 PDT")
-      1 | Ron      | Mail | ["Fri Oct 08 00:00:00 2010 PDT","Sun Oct 10 00:00:00 2010 PDT")
-      1 | Ron      | Ship | ["Sun Oct 10 00:00:00 2010 PDT","Fri Oct 15 00:00:00 2010 PDT")
-      1 | Ron      | Ship | ["Fri Oct 15 00:00:00 2010 PDT",infinity)
+ emp_id | emp_name | dept |                      effective                      
+--------+----------+------+-----------------------------------------------------
+      2 | George   | Ship | ["2010-10-05 00:00:00-07","2010-10-09 00:00:00-07")
+      1 | Ron      | Ship | ["2010-10-01 00:00:00-07","2010-10-06 00:00:00-07")
+      1 | Ron      | Mail | ["2010-10-06 00:00:00-07","2010-10-08 00:00:00-07")
+      1 | Ron      | Mail | ["2010-10-08 00:00:00-07","2010-10-10 00:00:00-07")
+      1 | Ron      | Ship | ["2010-10-10 00:00:00-07","2010-10-15 00:00:00-07")
+      1 | Ron      | Ship | ["2010-10-15 00:00:00-07",infinity)
 (6 rows)
 
 SELECT * FROM unitemp_coalesce_select('SELECT emp_name, dept, effective FROM employee WHERE now() <@ asserted'::text, 
