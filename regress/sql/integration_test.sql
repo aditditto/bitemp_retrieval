@@ -257,9 +257,35 @@ SELECT DISTINCT e1.salary FROM
 emp e1 JOIN emp e2 ON 
   interval_joinable(e1.effective, e2.effective) AND
   e1.deptname = e2.deptname
-WHERE interval_contains_now(e1.asserted) AND 
-  interval_contains_now(e2.asserted) AND
+WHERE intervals_contains_now(ARRAY[e1.asserted, e2.asserted]) AND
   e1.id = 'ED' AND e2.id = 'DI';
+
+
+SELECT emp.name, cdept.budget, cdept.effective FROM 
+  unitemp_coalesce_table_effective('public', 'dept',
+    ARRAY['name', 'budget']) AS cdept (
+  name TEXT, budget numeric, effective tstzrange)
+JOIN dept ON dept.name = cdept.name AND 
+  interval_joinable(dept.effective, cdept.effective)
+JOIN emp ON dept.mgrid = emp.id AND 
+  interval_joinable(emp.effective, cdept.effective)
+WHERE TRIM(cdept.name) = 'Toy' AND cdept.budget > 175 AND
+  interval_len(cdept.effective) >= '1 year'::interval AND
+  intervals_contains_now(ARRAY[dept.asserted, emp.asserted]);
+
+WITH change_ts AS (
+  SELECT LOWER(emp.effective) AS ts FROM emp WHERE emp.id = 'ED' AND
+  TRIM(name) = 'Edward' AND interval_contains_now(emp.asserted)
+  ORDER BY LOWER(emp.effective) LIMIT 1
+)
+SELECT skills.name FROM skills WHERE empid = 'ED' AND
+interval_contains_now(skills.asserted) AND 
+LOWER(skills.effective) >= (SELECT ts FROM change_ts) AND
+skills.name NOT IN (
+  SELECT s2.name FROM skills s2 WHERE 
+  interval_contains_now(s2.asserted) AND
+  LOWER(s2.effective) < (SELECT ts FROM change_ts)
+);
 
 DROP TABLE public.emp;
 DROP TABLE public.dept;

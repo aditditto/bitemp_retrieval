@@ -152,8 +152,7 @@ function tmda_fi(p_schema, p_table, p_group_by, p_aggr_funcs, p_aggr_target, p_a
               plv8.elog(log_level, `gtrow.tstart.getTime(): ${gtrow.tstart.getTime()}`);
               plv8.elog(log_level, `target.effective_start.getTime(): ${target.effective_start.getTime()}`);
               attr_scaling = (gtrow.tend.getTime() - gtrow.tstart.getTime()) / (rowtend - target.effective_start.getTime());
-              if (v_attr_props.get(p_aggr_target[k]) == 'malleable')
-                attr_scaling = Math.min(1, attr_scaling);
+              attr_scaling = Math.min(1, attr_scaling);
             }
             plv8.elog(log_level, `p_aggr_target[k]: ${p_aggr_target[k]}`);
             plv8.elog(log_level, `attr_scaling: ${attr_scaling}`);

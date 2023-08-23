@@ -133,3 +133,41 @@ SELECT interval_contains_now(
  t
 (1 row)
 
+SELECT intervals_contains_now(ARRAY[temporal_relationships.timeperiod('-infinity', 'infinity'),
+    temporal_relationships.timeperiod('-infinity', 'infinity'),
+    temporal_relationships.timeperiod('-infinity', '1950-01-01'::timestamptz)]
+    );
+ intervals_contains_now 
+------------------------
+ f
+(1 row)
+
+SELECT intervals_contains_now(ARRAY[temporal_relationships.timeperiod('-infinity', 'infinity'),
+    temporal_relationships.timeperiod('-infinity', 'infinity')]
+    );
+ intervals_contains_now 
+------------------------
+ t
+(1 row)
+
+SELECT intervals_contains_ts(ARRAY[
+    temporal_relationships.timeperiod('2010-10-10'::timestamptz, '2020-10-20'::timestamptz),
+    temporal_relationships.timeperiod('2020-10-10'::timestamptz, '2020-10-20'::timestamptz)],
+    '2021-10-25'::timestamptz
+);
+ intervals_contains_ts 
+-----------------------
+ f
+(1 row)
+
+SELECT intervals_contains_ts(ARRAY[
+    temporal_relationships.timeperiod('2010-10-10'::timestamptz, '2020-10-20'::timestamptz),
+    temporal_relationships.timeperiod('2020-10-10'::timestamptz, '2020-10-20'::timestamptz),
+    temporal_relationships.timeperiod('2020-10-10'::timestamptz, '2021-10-20'::timestamptz)],
+    '2020-10-15'::timestamptz
+);
+ intervals_contains_ts 
+-----------------------
+ t
+(1 row)
+

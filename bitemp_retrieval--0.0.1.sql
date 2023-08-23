@@ -82,6 +82,53 @@ $BODY$
 LANGUAGE plpgsql;
 
 CREATE OR REPLACE
+FUNCTION intervals_contains_now(
+    intervs temporal_relationships.timeperiod[]
+    ) 
+RETURNS BOOLEAN
+AS
+$BODY$
+DECLARE
+  _interv temporal_relationships.timeperiod;
+  found BOOLEAN;
+BEGIN
+  FOREACH _interv IN ARRAY intervs
+  LOOP
+    IF NOT (now() <@ _interv) THEN
+      return 'f';
+    END IF;
+  END LOOP;
+
+  RETURN 't';
+END;
+$BODY$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE
+FUNCTION intervals_contains_ts(
+    intervs temporal_relationships.timeperiod[],
+    ts timestamptz
+    ) 
+RETURNS BOOLEAN
+AS
+$BODY$
+DECLARE
+  _interv temporal_relationships.timeperiod;
+  found BOOLEAN;
+BEGIN
+  FOREACH _interv IN ARRAY intervs
+  LOOP
+    IF NOT (ts <@ _interv) THEN
+      return 'f';
+    END IF;
+  END LOOP;
+
+  RETURN 't';
+END;
+$BODY$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE
 FUNCTION interval_joinable(
     a temporal_relationships.timeperiod,
     b temporal_relationships.timeperiod
@@ -1344,8 +1391,7 @@ $$
               plv8.elog(log_level, `gtrow.tstart.getTime(): ${gtrow.tstart.getTime()}`);
               plv8.elog(log_level, `target.effective_start.getTime(): ${target.effective_start.getTime()}`);
               attr_scaling = (gtrow.tend.getTime() - gtrow.tstart.getTime()) / (rowtend - target.effective_start.getTime());
-              if (v_attr_props.get(p_aggr_target[k]) == 'malleable')
-                attr_scaling = Math.min(1, attr_scaling);
+              attr_scaling = Math.min(1, attr_scaling);
             }
             plv8.elog(log_level, `p_aggr_target[k]: ${p_aggr_target[k]}`);
             plv8.elog(log_level, `attr_scaling: ${attr_scaling}`);

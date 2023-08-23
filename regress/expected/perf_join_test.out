@@ -58,11 +58,15 @@ EXPLAIN ANALYZE SELECT * FROM public.emp30k JOIN public.dept ON public.emp30k.de
  Execution Time: 26.384 ms
 (8 rows)
 
-EXPLAIN ANALYZE SELECT public.emp30k.id, public.dept.name, interval_join(public.emp30k.effective, public.dept.effective) AS effective
+EXPLAIN ANALYZE SELECT public.emp30k.id, public.dept.name, 
+interval_join(
+  public.emp30k.effective, public.dept.effective
+  ) AS effective
 FROM public.emp30k JOIN public.dept ON 
   public.emp30k.deptid = public.dept.id AND 
   interval_joinable(public.emp30k.effective, public.dept.effective)
-  WHERE interval_contains_now(public.emp30k.asserted) AND interval_contains_now(public.dept.asserted);
+  WHERE interval_contains_now(public.emp30k.asserted) AND 
+  interval_contains_now(public.dept.asserted);
                                                     QUERY PLAN                                                    
 ------------------------------------------------------------------------------------------------------------------
  Hash Join  (cost=163.21..8412.33 rows=2228 width=68) (actual time=1.376..435.849 rows=30000 loops=1)

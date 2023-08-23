@@ -81,3 +81,25 @@ SELECT interval_contains_now(
 SELECT interval_contains_now(
     temporal_relationships.timeperiod('-infinity', 'infinity')
 );
+
+SELECT intervals_contains_now(ARRAY[temporal_relationships.timeperiod('-infinity', 'infinity'),
+    temporal_relationships.timeperiod('-infinity', 'infinity'),
+    temporal_relationships.timeperiod('-infinity', '1950-01-01'::timestamptz)]
+    );
+
+SELECT intervals_contains_now(ARRAY[temporal_relationships.timeperiod('-infinity', 'infinity'),
+    temporal_relationships.timeperiod('-infinity', 'infinity')]
+    );
+
+SELECT intervals_contains_ts(ARRAY[
+    temporal_relationships.timeperiod('2010-10-10'::timestamptz, '2020-10-20'::timestamptz),
+    temporal_relationships.timeperiod('2020-10-10'::timestamptz, '2020-10-20'::timestamptz)],
+    '2021-10-25'::timestamptz
+);
+
+SELECT intervals_contains_ts(ARRAY[
+    temporal_relationships.timeperiod('2010-10-10'::timestamptz, '2020-10-20'::timestamptz),
+    temporal_relationships.timeperiod('2020-10-10'::timestamptz, '2020-10-20'::timestamptz),
+    temporal_relationships.timeperiod('2020-10-10'::timestamptz, '2021-10-20'::timestamptz)],
+    '2020-10-15'::timestamptz
+);
