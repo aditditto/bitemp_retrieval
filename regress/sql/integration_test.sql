@@ -287,6 +287,18 @@ skills.name NOT IN (
   LOWER(s2.effective) < (SELECT ts FROM change_ts)
 );
 
+SELECT effective, interval_len(effective) FROM 
+unitemp_coalesce_select_effective($$
+  SELECT effective FROM ita_now('public','dept',
+  '{}',
+  ARRAY['SUM'],
+  ARRAY['budget'],
+  ARRAY['sum_budget']
+  ) AS (sum_budget numeric, effective tstzrange) 
+  WHERE sum_budget > 100
+$$, '{}') AS (effective tstzrange) 
+ORDER BY interval_len(effective) DESC LIMIT 1;
+
 DROP TABLE public.emp;
 DROP TABLE public.dept;
 DROP TABLE public.skills;

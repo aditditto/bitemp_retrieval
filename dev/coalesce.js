@@ -7,6 +7,8 @@ function coalesce_select(p_query, p_list_of_fields, p_temporal_field) {
   plv8.execute("SET DATESTYLE TO 'ISO'");
   let fields_string = p_list_of_fields.map((field) => `"${field}"`).join(",");
   let query = `${p_query} ORDER BY ${fields_string}, LOWER("${p_temporal_field}")`;
+  if (p_list_of_fields.length == 0)
+    query = `${p_query} ORDER BY LOWER("${p_temporal_field}")`;
   let plan = plv8.prepare(query);
   let cursor = plan.cursor();
 

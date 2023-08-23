@@ -187,6 +187,8 @@ $body$
   plv8.execute("SET DATESTYLE TO 'ISO'");
   let fields_string = p_list_of_fields.map((field) => `"${field}"`).join(",");
   let query = `${p_query} ORDER BY ${fields_string}, LOWER("${p_temporal_field}")`;
+  if (p_list_of_fields.length == 0)
+    query = `${p_query} ORDER BY LOWER("${p_temporal_field}")`;
   let plan = plv8.prepare(query);
   let cursor = plan.cursor();
 
@@ -262,6 +264,8 @@ $body$
   let p_temporal_field = "effective";
   let fields_string = p_list_of_fields.map((field) => `"${field}"`).join(",");
   let query = `${p_query} ORDER BY ${fields_string}, LOWER("${p_temporal_field}")`;
+  if (p_list_of_fields.length == 0)
+    query = `${p_query} ORDER BY LOWER("${p_temporal_field}")`;
   let plan = plv8.prepare(query);
   let cursor = plan.cursor();
 
@@ -337,6 +341,8 @@ $body$
   let p_temporal_field = "effective";
   let fields_string = p_list_of_fields.map((field) => `"${field}"`).join(",");
   let query = `SELECT ${fields_string}, \"${p_temporal_field}\" FROM \"${p_schema}\".\"${p_table}\" WHERE now() <@ asserted ORDER BY ${fields_string}, \"${p_temporal_field}\"`;
+  if (p_list_of_fields.length == 0)
+    query = `SELECT ${fields_string}, \"${p_temporal_field}\" FROM \"${p_schema}\".\"${p_table}\" WHERE now() <@ asserted ORDER BY \"${p_temporal_field}\"`;
   let plan = plv8.prepare(query);
   let cursor = plan.cursor();
 
@@ -610,12 +616,12 @@ $$
                       if (!(v_attr_props.get(p_aggr_target[k]) == 'atomic' && attr_scaling != 1)) {
                         counts[k]++;
                         const rowval = noderow[p_aggr_target[k]] * attr_scaling;
-                      
-                        if (aggr_func == "avg") {
+                        plv8.elog(log_level, `rowval: ${rowval} nodeval: ${noderow[p_aggr_target[k]]}`);
+                        if (aggr_func.toLowerCase() == "avg") {
                           aggrResults[k] += rowval;
-                        } else if (aggr_func == "sum") {
+                        } else if (aggr_func.toLowerCase() == "sum") {
                           aggrResults[k] += rowval;
-                        } else if (aggr_func == "max") {
+                        } else if (aggr_func.toLowerCase() == "max") {
                           if (counts[k] === 1) { // First row
                             aggrResults[k] = rowval;
                           } else {
@@ -623,7 +629,7 @@ $$
                               aggrResults[k] = rowval;
                             }
                           }
-                        } else if (aggr_func == "min") {
+                        } else if (aggr_func.toLowerCase() == "min") {
                           if (counts[k] === 1) {
                             aggrResults[k] = rowval;
                           } else {
@@ -631,7 +637,7 @@ $$
                               aggrResults[k] = rowval;
                             }
                           }
-                        } else if (aggr_func == "count") {
+                        } else if (aggr_func.toLowerCase() == "count") {
                             aggrResults[k]++;
                         }
                       }
@@ -646,7 +652,7 @@ $$
                   }
       
                   const aggr_func = p_aggr_funcs[k];
-                  if (aggr_func == "avg") {
+                  if (aggr_func.toLowerCase() == "avg") {
                     aggrResults[k] = aggrResults[k] / counts[k];
                   }
                 }
@@ -655,6 +661,7 @@ $$
                   const result_period = `["${toIsoString(g.tstart)}", "${isNaN(g.tend) ? 'infinity' : toIsoString(g.tend)}")`
                   let to_return = {};
                   for (let k = 0; k < p_aggr_fieldnames.length; k++) {
+                    plv8.elog(log_level, `aggrResults[k]: ${aggrResults[k]}`);
                     const fieldname = p_aggr_fieldnames[k];
                     if (counts[k] > 0) {
                       to_return[fieldname] = aggrResults[k];
@@ -746,12 +753,12 @@ $$
                 if (!(v_attr_props.get(p_aggr_target[k]) == 'atomic' && attr_scaling != 1)) {
                   counts[k]++;
                   const rowval = noderow[p_aggr_target[k]] * attr_scaling;
-                
-                  if (aggr_func == "avg") {
+                  plv8.elog(log_level, `rowval: ${rowval} nodeval: ${noderow[p_aggr_target[k]]}`);
+                  if (aggr_func.toLowerCase() == "avg") {
                     aggrResults[k] += rowval;
-                  } else if (aggr_func == "sum") {
+                  } else if (aggr_func.toLowerCase() == "sum") {
                     aggrResults[k] += rowval;
-                  } else if (aggr_func == "max") {
+                  } else if (aggr_func.toLowerCase() == "max") {
                     if (counts[k] === 1) { // First row
                       aggrResults[k] = rowval;
                     } else {
@@ -759,7 +766,7 @@ $$
                         aggrResults[k] = rowval;
                       }
                     }
-                  } else if (aggr_func == "min") {
+                  } else if (aggr_func.toLowerCase() == "min") {
                     if (counts[k] === 1) {
                       aggrResults[k] = rowval;
                     } else {
@@ -767,7 +774,7 @@ $$
                         aggrResults[k] = rowval;
                       }
                     }
-                  } else if (aggr_func == "count") {
+                  } else if (aggr_func.toLowerCase() == "count") {
                       aggrResults[k]++;
                   }
                 }
@@ -782,7 +789,7 @@ $$
             }
 
             const aggr_func = p_aggr_funcs[k];
-            if (aggr_func == "avg") {
+            if (aggr_func.toLowerCase() == "avg") {
               aggrResults[k] = aggrResults[k] / counts[k];
             }
           }
@@ -1012,11 +1019,11 @@ $$
                         counts[k]++;
                         const rowval = noderow[p_aggr_target[k]] * attr_scaling;
                       
-                        if (aggr_func == "avg") {
+                        if (aggr_func.toLowerCase() == "avg") {
                           aggrResults[k] += rowval;
-                        } else if (aggr_func == "sum") {
+                        } else if (aggr_func.toLowerCase() == "sum") {
                           aggrResults[k] += rowval;
-                        } else if (aggr_func == "max") {
+                        } else if (aggr_func.toLowerCase() == "max") {
                           if (count === 1) { // First row
                             aggrResults[k] = rowval;
                           } else {
@@ -1024,7 +1031,7 @@ $$
                               aggrResults[k] = rowval;
                             }
                           }
-                        } else if (aggr_func == "min") {
+                        } else if (aggr_func.toLowerCase() == "min") {
                           if (count === 1) {
                             aggrResults[k] = rowval;
                           } else {
@@ -1032,7 +1039,7 @@ $$
                               aggrResults[k] = rowval;
                             }
                           }
-                        } else if (aggr_func == "count") {
+                        } else if (aggr_func.toLowerCase() == "count") {
                             aggrResults[k]++;
                         }
                       }
@@ -1047,7 +1054,7 @@ $$
                   }
       
                   const aggr_func = p_aggr_funcs[k];
-                  if (aggr_func == "avg") {
+                  if (aggr_func.toLowerCase() == "avg") {
                     aggrResults[k] = aggrResults[k] / counts[k];
                   }
                 }
@@ -1150,11 +1157,11 @@ $$
                   counts[k]++;
                   const rowval = noderow[p_aggr_target[k]] * attr_scaling;
                 
-                  if (aggr_func == "avg") {
+                  if (aggr_func.toLowerCase() == "avg") {
                     aggrResults[k] += rowval;
-                  } else if (aggr_func == "sum") {
+                  } else if (aggr_func.toLowerCase() == "sum") {
                     aggrResults[k] += rowval;
-                  } else if (aggr_func == "max") {
+                  } else if (aggr_func.toLowerCase() == "max") {
                     if (count === 1) { // First row
                       aggrResults[k] = rowval;
                     } else {
@@ -1162,7 +1169,7 @@ $$
                         aggrResults[k] = rowval;
                       }
                     }
-                  } else if (aggr_func == "min") {
+                  } else if (aggr_func.toLowerCase() == "min") {
                     if (count === 1) {
                       aggrResults[k] = rowval;
                     } else {
@@ -1170,7 +1177,7 @@ $$
                         aggrResults[k] = rowval;
                       }
                     }
-                  } else if (aggr_func == "count") {
+                  } else if (aggr_func.toLowerCase() == "count") {
                       aggrResults[k]++;
                   }
                 }
@@ -1185,7 +1192,7 @@ $$
             }
 
             const aggr_func = p_aggr_funcs[k];
-            if (aggr_func == "avg") {
+            if (aggr_func.toLowerCase() == "avg") {
               aggrResults[k] = aggrResults[k] / counts[k];
             }
           }
@@ -1400,11 +1407,11 @@ $$
               counts[k]++;
               const rowval = target[p_aggr_target[k]] * attr_scaling;
             
-              if (aggr_func == "avg") {
+              if (aggr_func.toLowerCase() == "avg") {
                 aggrResults[k] += rowval;
-              } else if (aggr_func == "sum") {
+              } else if (aggr_func.toLowerCase() == "sum") {
                 aggrResults[k] += rowval;
-              } else if (aggr_func == "max") {
+              } else if (aggr_func.toLowerCase() == "max") {
                 if (counts[k] === 1) { // First row
                   aggrResults[k] = rowval;
                 } else {
@@ -1412,7 +1419,7 @@ $$
                     aggrResults[k] = rowval;
                   }
                 }
-              } else if (aggr_func == "min") {
+              } else if (aggr_func.toLowerCase() == "min") {
                 if (counts[k] === 1) {
                   aggrResults[k] = rowval;
                 } else {
@@ -1420,7 +1427,7 @@ $$
                     aggrResults[k] = rowval;
                   }
                 }
-              } else if (aggr_func == "count") {
+              } else if (aggr_func.toLowerCase() == "count") {
                   aggrResults[k]++;
               }
             }
@@ -1436,7 +1443,7 @@ $$
         }
 
         const aggr_func = p_aggr_funcs[k];
-        if (aggr_func == "avg") {
+        if (aggr_func.toLowerCase() == "avg") {
           aggrResults[k] = aggrResults[k] / counts[k];
         }
       }
