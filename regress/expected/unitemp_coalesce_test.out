@@ -233,6 +233,14 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
                     1
 (1 row)
 
+SELECT emp_id, emp_name, dept, effective FROM employee2 WHERE now() <@ asserted ORDER BY emp_name, asserted;
+ emp_id | emp_name | dept |                      effective                      
+--------+----------+------+-----------------------------------------------------
+      3 | Bob      | Ship | ["2010-10-10 00:00:00-07","2010-10-15 00:00:00-07")
+      1 | George   | Ship | ["2010-10-08 00:00:00-07","2010-10-11 00:00:00-07")
+      2 | Ron      | Ship | ["2010-09-28 00:00:00-07","2010-10-01 00:00:00-07")
+(3 rows)
+
 SELECT * FROM unitemp_coalesce_select_effective(
     $$
     SELECT * FROM (

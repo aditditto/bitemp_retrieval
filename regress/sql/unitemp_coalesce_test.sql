@@ -132,6 +132,8 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     temporal_relationships.timeperiod(now(), 'infinity') --asserted
 );
 
+SELECT emp_id, emp_name, dept, effective FROM employee2 WHERE now() <@ asserted ORDER BY emp_name, asserted;
+
 SELECT * FROM unitemp_coalesce_select_effective(
     $$
     SELECT * FROM (
